@@ -1,0 +1,107 @@
+/**
+ * NKZ VPN Module API Client
+ *
+ * Provides type-safe access to the nkz-network-controller backend.
+ * Requests are authenticated via the Bearer token from the NKZ host.
+ */
+
+// =============================================================================
+// Types
+// =============================================================================
+
+export type DeviceType = 'rover' | 'gateway' | 'sensor_esp32';
+export type DeviceState = 'PENDING' | 'CONSUMED' | 'REVOKED';
+
+export interface Device {
+  device_uuid: string;
+  device_type: DeviceType;
+  device_name: string | null;
+  state: DeviceState;
+  headscale_peer_id: string | null;
+  online: boolean;
+  last_seen: string | null;
+}
+
+export interface DeviceListResponse {
+  devices: Device[];
+  total: number;
+}
+
+export interface ClaimRequest {
+  device_uuid: string;
+  claim_code: string;
+  device_name?: string;
+}
+
+export interface ClaimResponse {
+  device_uuid: string;
+  device_type: DeviceType;
+  device_name: string | null;
+  preauth_key: string | null;
+  login_server: string | null;
+  ngsi_entity_id: string | null;
+  state: DeviceState;
+}
+
+// =============================================================================
+// Auth token resolver
+// =============================================================================
+
+function getAuthToken(): string | null {
+  // Try NKZ SDK (preferred)
+  const sdk = (window as any).__NKZ_SDK__;
+  if (sdk?.auth?.getToken) return sdk.auth.getToken();
+  // Fallback: legacy auth object injected by host
+  const auth = (window as any).__nekazariAuth;
+  return auth?.token || null;
+}
+
+// =============================================================================
+// API Client
+// =============================================================================
+
+class VpnApiClient {
+  private readonly base = '/api/vpn';
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> || {}),
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${this.base}${endpoint}`, { ...options, headers });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as any).detail || `API error: ${res.status}`);
+    }
+    if (res.status === 204) return undefined as unknown as T;
+    return res.json();
+  }
+
+  /** List all provisioned devices for the current tenant */
+  listDevices(): Promise<DeviceListResponse> {
+    return this.request('/devices/');
+  }
+
+  /** Get real-time status of a single device (includes Headscale online state) */
+  getDeviceStatus(uuid: string): Promise<Device> {
+    return this.request(`/devices/${encodeURIComponent(uuid)}/status`);
+  }
+
+  /** Activate a device using its Claim Code */
+  claimDevice(req: ClaimRequest): Promise<ClaimResponse> {
+    return this.request('/devices/claim', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  }
+
+  /** Revoke a device (removes from Headscale, marks REVOKED) */
+  revokeDevice(uuid: string): Promise<void> {
+    return this.request(`/devices/${encodeURIComponent(uuid)}`, { method: 'DELETE' });
+  }
+}
+
+export const vpnApi = new VpnApiClient();

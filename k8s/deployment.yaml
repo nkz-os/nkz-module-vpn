@@ -1,0 +1,178 @@
+# =============================================================================
+# NKZ Network Controller — Deployment
+# =============================================================================
+# PRE-REQUISITO: Secret 'nkz-network-controller-secret' debe existir.
+# Ver OPS_PENDING.md, Bloque 7.
+# =============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nkz-network-controller
+  namespace: nekazari
+  labels:
+    app: nkz-network-controller
+    component: vpn-management
+    layer: infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nkz-network-controller
+  template:
+    metadata:
+      labels:
+        app: nkz-network-controller
+        component: vpn-management
+        layer: infrastructure
+    spec:
+      serviceAccountName: nkz-network-controller-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ghcr.io/nkz-os/nekazari-module-vpn/network-controller:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-secret
+                  key: postgres-url
+            - name: HEADSCALE_API_URL
+              value: "http://headscale-service:8080"
+            - name: HEADSCALE_PUBLIC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: headscale_public_url
+            - name: HEADSCALE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nkz-network-controller-secret
+                  key: headscale-api-key
+            - name: FACTORY_SECRET_V1
+              valueFrom:
+                secretKeyRef:
+                  name: nkz-network-controller-secret
+                  key: factory-secret-v1
+            - name: FACTORY_SECRET_CURRENT_VERSION
+              value: "1"
+            - name: REDIS_URL
+              value: "redis://redis-service:6379/0"
+            - name: KEYCLOAK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: keycloak_url
+            - name: JWT_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: jwt_issuer
+            - name: CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: cors_origins
+            - name: ENTITY_MANAGER_URL
+              value: "http://entity-manager-service:5000"
+            - name: K8S_NAMESPACE
+              value: "nekazari"
+            - name: IOT_CA_ISSUER
+              value: "nekazari-iot-ca"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nkz-network-controller-service
+  namespace: nekazari
+  labels:
+    app: nkz-network-controller
+spec:
+  selector:
+    app: nkz-network-controller
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  type: ClusterIP
+
+---
+# ServiceAccount con permisos para crear CertificateRequests en cert-manager
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nkz-network-controller-sa
+  namespace: nekazari
+  labels:
+    app: nkz-network-controller
+
+---
+# ClusterRole: solo crear/leer/borrar CertificateRequests
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nkz-network-controller-cr
+  labels:
+    app: nkz-network-controller
+rules:
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificaterequests"]
+    verbs: ["create", "get", "list", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nkz-network-controller-crb
+  labels:
+    app: nkz-network-controller
+subjects:
+  - kind: ServiceAccount
+    name: nkz-network-controller-sa
+    namespace: nekazari
+roleRef:
+  kind: ClusterRole
+  name: nkz-network-controller-cr
+  apiGroup: rbac.authorization.k8s.io
