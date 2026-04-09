@@ -88,4 +88,4 @@ jobs:
         with:
           args: --recursive --acl public-read
           source: './frontend/dist'
-          dest: 's3://${{ env.MINIO_BUCKET }}/vpn'
+          dest: 's3://${{ env.MINIO_BUCKET }}/modules/vpn'
