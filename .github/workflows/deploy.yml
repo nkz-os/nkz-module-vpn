@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: nkz-os/nekazari-module-vpn/network-controller
+  IMAGE_NAME: ${{ github.repository }}/network-controller
   MINIO_BUCKET: marketplace-modules
 
 jobs:
@@ -60,7 +60,15 @@ jobs:
         working-directory: ./frontend
         run: npm run build:module
 
-      - name: Upload to MinIO
+      - name: Upload frontend as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vpn-frontend-module
+          path: ./frontend/dist/
+          retention-days: 90
+
+      - name: Upload to MinIO (Official Repo Only)
+        if: github.repository == 'nkz-os/nkz-module-vpn'
         uses: prewk/s3-cp-action@master
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ROOT_USER }}
