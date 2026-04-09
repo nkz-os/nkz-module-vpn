@@ -77,8 +77,8 @@ jobs:
             echo "has_secrets=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload to MinIO (Official Repo Only)
-        if: github.repository == 'nkz-os/nkz-module-vpn' && steps.check_secrets.outputs.has_secrets == 'true'
+      - name: Upload to MinIO
+        if: steps.check_secrets.outputs.has_secrets == 'true'
         uses: prewk/s3-cp-action@master
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ROOT_USER }}
