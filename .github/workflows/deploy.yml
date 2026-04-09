@@ -68,6 +68,6 @@ jobs:
           AWS_REGION: us-east-1
           S3_ENDPOINT: ${{ secrets.MINIO_URL }}
         with:
-          args: --acl public-read
+          args: --recursive --acl public-read
           source: './frontend/dist'
           dest: 's3://${{ env.MINIO_BUCKET }}/vpn'
