@@ -149,11 +149,12 @@ metadata:
     app: nkz-network-controller
 
 ---
-# ClusterRole: solo crear/leer/borrar CertificateRequests
+# Role: solo crear/leer/borrar CertificateRequests en el namespace
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: nkz-network-controller-cr
+  namespace: nekazari
   labels:
     app: nkz-network-controller
 rules:
@@ -163,9 +164,10 @@ rules:
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: nkz-network-controller-crb
+  namespace: nekazari
   labels:
     app: nkz-network-controller
 subjects:
@@ -173,6 +175,6 @@ subjects:
     name: nkz-network-controller-sa
     namespace: nekazari
 roleRef:
-  kind: ClusterRole
+  kind: Role
   name: nkz-network-controller-cr
   apiGroup: rbac.authorization.k8s.io
