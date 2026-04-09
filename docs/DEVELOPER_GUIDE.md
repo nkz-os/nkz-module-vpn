@@ -39,15 +39,15 @@ During your device's manufacturing or flashing process, you must generate or obt
 On the robot's first boot in the field, run the following command to point the Tailscale client to the Nekazari Headscale server instead of the public Tailscale servers.
 
 ```bash
-# Replace 'https://vpn.nkz.robotika.cloud' with the actual production URL of the Nekazari SDN
-sudo tailscale up --login-server=https://vpn.nkz.robotika.cloud
+# Replace 'https://vpn.robotika.cloud' with the actual production URL of the Nekazari SDN
+sudo tailscale up --login-server=https://vpn.robotika.cloud
 ```
 
 ### Step 3: Registration
 When you run the command above, Tailscale will output an authentication URL in the terminal, looking something like this:
 ```text
 To authenticate, visit:
-https://vpn.nkz.robotika.cloud/register/nodekey:xyz123...
+https://vpn.robotika.cloud/register/nodekey:xyz123...
 ```
 
 **Do NOT visit this URL.**
