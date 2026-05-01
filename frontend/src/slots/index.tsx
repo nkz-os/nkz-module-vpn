@@ -69,7 +69,7 @@ export const moduleSlots: ModuleViewerSlots = {
       priority: 20,
       localComponent: VpnContextPanel,
       showWhen: {
-        entityType: ['Robot', 'AgriRobot', 'Rover', 'IoTGateway'],
+        entityType: ['AgriRobot', 'AgriGateway', 'AgriSensor'],
       },
     },
   ],
