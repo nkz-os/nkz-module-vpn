@@ -24,6 +24,7 @@ from app.models import ProvisionedDevice, DEVICE_TYPE_TO_NGSI_TYPE
 from app.services import claim_code as cc_service
 from app.services import headscale as hs_service
 from app.services import entity_manager as em_service
+from app.services import tenant_limits as tl_service
 from app.config import settings
 from app.middleware.rate_limit import limiter
 
@@ -175,6 +176,15 @@ async def claim_device(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid claim code",
+        )
+
+    # Quota check: enforce max_devices per tenant
+    active_count = await tl_service.count_active_devices(db, tenant_id)
+    max_devices = await tl_service.get_max_devices(db, tenant_id)
+    if active_count >= max_devices:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Device quota exceeded ({active_count}/{max_devices})",
         )
 
     # Nombre del dispositivo (del request o conservar el de fábrica)
