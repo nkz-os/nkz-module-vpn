@@ -32,6 +32,7 @@ ALLOWED_ORIGINS = [o.strip() for o in _s.CORS_ORIGINS.split(",") if o.strip()]
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting NKZ Network Controller...")
+    _ = _s.jwt_issuer_url  # Force early evaluation — fail at startup if JWT issuer is unconfigured
     await init_db()
     logger.info("Database tables ready.")
     yield
