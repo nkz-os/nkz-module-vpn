@@ -2,7 +2,7 @@
  * NKZ VPN Module API Client
  *
  * Provides type-safe access to the nkz-network-controller backend.
- * Requests are authenticated via the Bearer token from the NKZ host.
+ * Requests are authenticated via the httpOnly cookie (nkz_token).
  */
 
 // =============================================================================
@@ -20,6 +20,7 @@ export interface Device {
   headscale_peer_id: string | null;
   online: boolean;
   last_seen: string | null;
+  tenant_id?: string | null;
 }
 
 export interface DeviceListResponse {
@@ -44,16 +45,12 @@ export interface ClaimResponse {
 }
 
 // =============================================================================
-// Auth token resolver
+// Tenant ID resolver
 // =============================================================================
 
-function getAuthToken(): string | null {
-  // Try NKZ SDK (preferred)
-  const sdk = (window as any).__NKZ_SDK__;
-  if (sdk?.auth?.getToken) return sdk.auth.getToken();
-  // Fallback: legacy auth object injected by host
-  const auth = (window as any).__nekazariAuth;
-  return auth?.token || null;
+function getTenantId(): string | null {
+  const ctx = (window as any).__nekazariAuthContext;
+  return ctx?.tenantId || null;
 }
 
 // =============================================================================
@@ -64,14 +61,18 @@ class VpnApiClient {
   private readonly base = '/api/vpn';
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = getAuthToken();
+    const tenantId = getTenantId();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string> || {}),
     };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (tenantId) headers['X-Tenant-ID'] = tenantId;
 
-    const res = await fetch(`${this.base}${endpoint}`, { ...options, headers });
+    const res = await fetch(`${this.base}${endpoint}`, {
+      ...options,
+      credentials: 'include',
+      headers,
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error((err as any).detail || `API error: ${res.status}`);
@@ -81,8 +82,9 @@ class VpnApiClient {
   }
 
   /** List all provisioned devices for the current tenant */
-  listDevices(): Promise<DeviceListResponse> {
-    return this.request('/devices/');
+  listDevices(allTenants = false): Promise<DeviceListResponse> {
+    const qs = allTenants ? '?all_tenants=true' : '';
+    return this.request(`/devices/${qs}`);
   }
 
   /** Get real-time status of a single device (includes Headscale online state) */
