@@ -7,14 +7,23 @@ export const DeviceQuotaWidget: React.FC = () => {
   const { t } = useTranslation('vpn');
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const maxDevices = 50;
 
   useEffect(() => {
     vpnApi.listDevices()
       .then(d => setDevices(d.devices))
-      .catch(() => {})
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl border border-red-100 p-4">
+        <p className="text-xs text-red-500">{t('widget.loadError')}</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
