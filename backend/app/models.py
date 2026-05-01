@@ -2,6 +2,7 @@
 Modelos SQLAlchemy para el Network Controller.
 """
 
+import uuid as _uuid
 from sqlalchemy import Column, String, Integer, Text, TIMESTAMP, func
 from sqlalchemy.orm import DeclarativeBase
 
@@ -65,3 +66,17 @@ DEVICE_TYPE_TO_NGSI_TYPE: dict[str, str] = {
     "gateway": "AgriGateway",
     "sensor_esp32": "AgriSensor",
 }
+
+
+class DeviceAuditLog(Base):
+    """Immutable audit trail for device lifecycle events."""
+
+    __tablename__ = "device_audit_log"
+
+    id = Column(String, primary_key=True, default=lambda: str(_uuid.uuid4()))
+    tenant_id = Column(String, nullable=False, index=True)
+    device_uuid = Column(String, nullable=False, index=True)
+    action = Column(String, nullable=False)  # REGISTERED | CLAIMED | REVOKED
+    actor_sub = Column(String, nullable=False)  # JWT sub claim
+    ip_address = Column(String, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
