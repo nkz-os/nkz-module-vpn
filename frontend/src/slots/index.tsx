@@ -43,13 +43,14 @@ export interface ModuleViewerSlots {
 
 import { VpnStatusWidget } from '../components/VpnStatusWidget';
 import { VpnContextPanel } from '../components/VpnContextPanel';
+import { DeviceQuotaWidget } from '../components/DeviceQuotaWidget';
 
 // =============================================================================
 // Slot Definitions
 // =============================================================================
 
 export const moduleSlots: ModuleViewerSlots = {
-  // Dashboard card: shows online/total device count
+  // Dashboard cards
   'dashboard-widget': [
     {
       id: `${MODULE_ID}-status-widget`,
@@ -57,6 +58,13 @@ export const moduleSlots: ModuleViewerSlots = {
       component: 'VpnStatusWidget',
       priority: 40,
       localComponent: VpnStatusWidget,
+    },
+    {
+      id: `${MODULE_ID}-quota-widget`,
+      moduleId: MODULE_ID,
+      component: 'DeviceQuotaWidget',
+      priority: 39,
+      localComponent: DeviceQuotaWidget,
     },
   ],
 
