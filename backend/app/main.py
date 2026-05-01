@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import init_db
+from app.middleware.tenant_context import TenantContextMiddleware
 from app.routes import devices, factory, peers
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"],
 )
+
+app.add_middleware(TenantContextMiddleware)
 
 app.include_router(devices.router, prefix="/api/vpn")
 app.include_router(factory.router, prefix="/api/vpn")

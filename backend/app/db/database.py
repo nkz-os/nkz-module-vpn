@@ -2,6 +2,8 @@
 Configuración de base de datos con SQLAlchemy async.
 """
 
+from fastapi import Request
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from app.config import settings
 from app.models import Base
@@ -26,9 +28,14 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def get_db():
-    """Dependency de FastAPI para inyectar sesión de BD."""
+async def get_db(request: Request):
+    """Dependency de FastAPI para inyectar sesión de BD con tenant context."""
     async with AsyncSessionLocal() as session:
+        tenant_id = getattr(request.state, 'tenant_id', None) if request else None
+        if tenant_id:
+            await session.execute(
+                text("SET app.current_tenant_id = :tid"), {"tid": tenant_id}
+            )
         try:
             yield session
             await session.commit()
