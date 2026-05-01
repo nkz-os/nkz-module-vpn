@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     # Entity Manager — para crear entidades NGSI-LD al activar dispositivos
     ENTITY_MANAGER_URL: str = "http://entity-manager-service:5000"
 
+    # NGSI-LD @context URL — required for FIWARE compliance
+    CONTEXT_URL: str = "http://api-gateway-service:5000/ngsi-ld-context.json"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
