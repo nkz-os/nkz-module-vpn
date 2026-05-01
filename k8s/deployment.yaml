@@ -86,6 +86,8 @@ spec:
                   key: cors_origins
             - name: ENTITY_MANAGER_URL
               value: "http://entity-manager-service:5000"
+            - name: CONTEXT_URL
+              value: "http://api-gateway-service:5000/ngsi-ld-context.json"
             - name: K8S_NAMESPACE
               value: "nekazari"
             - name: IOT_CA_ISSUER
