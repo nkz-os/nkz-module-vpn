@@ -73,8 +73,12 @@ async def create_ngsi_entity(
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-        # FIWARE-Service header enables multi-tenant routing in entity-manager
         "Fiware-Service": tenant_id,
+        "Link": (
+            f'<{settings.CONTEXT_URL}>; '
+            f'rel="http://www.w3.org/ns/json-ld#context"; '
+            f'type="application/ld+json"'
+        ),
     }
 
     async with httpx.AsyncClient(timeout=5.0) as client:
