@@ -82,10 +82,13 @@ async def list_devices(
 
     if all_tenants and is_platform_admin:
         await db.execute(text("SET app.current_tenant_id = '__platform__'"))
-        result = await db.execute(
-            select(ProvisionedDevice)
-            .order_by(ProvisionedDevice.created_at.desc())
-        )
+        try:
+            result = await db.execute(
+                select(ProvisionedDevice)
+                .order_by(ProvisionedDevice.created_at.desc())
+            )
+        finally:
+            await db.execute(text("RESET app.current_tenant_id"))
     else:
         result = await db.execute(
             select(ProvisionedDevice)
