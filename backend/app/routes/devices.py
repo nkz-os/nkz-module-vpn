@@ -25,6 +25,7 @@ from app.services import claim_code as cc_service
 from app.services import headscale as hs_service
 from app.services import entity_manager as em_service
 from app.config import settings
+from app.middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/devices", tags=["Devices"])
@@ -112,6 +113,30 @@ async def claim_device(
     Para KLinux (rover/gateway): genera Pre-Auth Key de Headscale (5 min validez).
     Para ESP32: solo valida el código y marca como CONSUMED (se conecta via mTLS).
     """
+    # Rate limiting: per-tenant (5/h) + per-IP (10/h)
+    tenant_key = f"rate:claim:tenant:{tenant_id}"
+    ip = request.client.host if request.client else "unknown"
+    ip_key = f"rate:claim:ip:{ip}"
+
+    if not await limiter.check(
+        tenant_key,
+        settings.CLAIM_RATE_LIMIT_ATTEMPTS,
+        settings.CLAIM_RATE_LIMIT_WINDOW_SECONDS,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many claim attempts for this tenant. Try again later.",
+        )
+    if not await limiter.check(
+        ip_key,
+        10,
+        settings.CLAIM_RATE_LIMIT_WINDOW_SECONDS,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many claim attempts from this IP. Try again later.",
+        )
+
     device = await db.get(ProvisionedDevice, req.device_uuid)
     if not device:
         raise HTTPException(
