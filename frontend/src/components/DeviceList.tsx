@@ -2,9 +2,12 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Wifi, WifiOff, Bot, Radio, Cpu, Trash2, RefreshCw, MoreHorizontal } from 'lucide-react';
 import { useTranslation } from '@nekazari/sdk';
 import { vpnApi, Device, DeviceType, DeviceState } from '../services/api';
+import { RevokeConfirmModal } from './RevokeConfirmModal';
 
 interface Props {
   refreshTrigger: number;
+  allTenants?: boolean;
+  isPlatformAdmin?: boolean;
 }
 
 const TYPE_ICONS: Record<DeviceType, React.ReactNode> = {
@@ -32,7 +35,7 @@ function formatLastSeen(ts: string | null, t: (k: string, opts?: Record<string, 
   return d.toLocaleDateString();
 }
 
-export const DeviceList: React.FC<Props> = ({ refreshTrigger }) => {
+export const DeviceList: React.FC<Props> = ({ refreshTrigger, allTenants, isPlatformAdmin }) => {
   const { t } = useTranslation('vpn');
   const typeLabels: Record<DeviceType, string> = useMemo(
     () => ({
@@ -46,20 +49,21 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<{ uuid: string; name: string } | null>(null);
   const [liveStatuses, setLiveStatuses] = useState<Record<string, { online: boolean; last_seen: string | null }>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await vpnApi.listDevices();
+      const data = await vpnApi.listDevices(allTenants);
       setDevices(data.devices);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [allTenants]);
 
   // Fetch live Headscale status for CONSUMED KLinux devices
   const fetchLiveStatuses = useCallback(async (devs: Device[]) => {
@@ -88,11 +92,16 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger }) => {
     }
   }, [devices, fetchLiveStatuses]);
 
-  const handleRevoke = async (uuid: string, name: string | null) => {
-    if (!confirm(t('list.revokeConfirm', { name: name || uuid }))) return;
-    setRevoking(uuid);
+  const handleRevokeClick = (uuid: string, name: string | null) => {
+    setRevokeTarget({ uuid, name: name || uuid });
+  };
+
+  const handleRevokeConfirm = async () => {
+    if (!revokeTarget) return;
+    setRevoking(revokeTarget.uuid);
     try {
-      await vpnApi.revokeDevice(uuid);
+      await vpnApi.revokeDevice(revokeTarget.uuid);
+      setRevokeTarget(null);
       await load();
     } catch (e: any) {
       alert(t('list.revokeFailed', { message: e.message }));
@@ -135,6 +144,9 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger }) => {
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
+            {isPlatformAdmin && allTenants && (
+              <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.tenant')}</th>
+            )}
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colName')}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colUuid')}</th>
             <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colType')}</th>
@@ -153,6 +165,9 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger }) => {
 
             return (
               <tr key={device.device_uuid} className="hover:bg-gray-50 transition-colors">
+                {isPlatformAdmin && allTenants && (
+                  <td className="px-4 py-3 text-xs text-gray-500 font-mono">{(device as any).tenant_id}</td>
+                )}
                 <td className="px-4 py-3 font-medium text-gray-900">
                   {device.device_name || <span className="text-gray-400 italic">{t('list.unnamed')}</span>}
                 </td>
@@ -192,7 +207,7 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger }) => {
                 <td className="px-4 py-3">
                   {device.state !== 'REVOKED' && (
                     <button
-                      onClick={() => handleRevoke(device.device_uuid, device.device_name)}
+                      onClick={() => handleRevokeClick(device.device_uuid, device.device_name)}
                       disabled={revoking === device.device_uuid}
                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                       title={t('list.revokeTitle')}
@@ -209,6 +224,15 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger }) => {
           })}
         </tbody>
       </table>
+
+      {revokeTarget && (
+        <RevokeConfirmModal
+          deviceName={revokeTarget.name}
+          onConfirm={handleRevokeConfirm}
+          onCancel={() => setRevokeTarget(null)}
+          loading={revoking === revokeTarget.uuid}
+        />
+      )}
     </div>
   );
 };
