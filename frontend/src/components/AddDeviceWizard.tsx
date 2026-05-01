@@ -42,7 +42,20 @@ export const AddDeviceWizard: React.FC<Props> = ({ onClose, onSuccess }) => {
       setStep('success');
       onSuccess();
     } catch (err: any) {
-      setErrorMsg(err.message || t('wizard.errorGeneric'));
+      const msg = err.message || '';
+      if (msg.includes('quota exceeded') || msg.includes('quota')) {
+        if (msg.includes('quota exceeded')) {
+          setErrorMsg(t('wizard.errorQuotaExceeded', { used: 0, max: 0 }));
+        } else {
+          setErrorMsg(t('wizard.errorRateLimit'));
+        }
+      } else if (msg.includes('already activated') || msg.includes('409')) {
+        setErrorMsg(t('wizard.errorDeviceAlreadyActivated'));
+      } else if (msg.includes('revoked') || msg.includes('410')) {
+        setErrorMsg(t('wizard.errorDeviceRevoked'));
+      } else {
+        setErrorMsg(err.message || t('wizard.errorGeneric'));
+      }
       setStep('error');
     } finally {
       setLoading(false);
