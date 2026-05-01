@@ -14,7 +14,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/network-controller
-  MINIO_BUCKET: marketplace-modules
+  MINIO_BUCKET: nekazari-frontend
 
 jobs:
   build-and-push-backend:
@@ -77,15 +77,15 @@ jobs:
             echo "has_secrets=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Setup MinIO Client
+        if: steps.check_secrets.outputs.has_secrets == 'true'
+        run: |
+          curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+          chmod +x /usr/local/bin/mc
+
       - name: Upload to MinIO
         if: steps.check_secrets.outputs.has_secrets == 'true'
-        uses: prewk/s3-cp-action@master
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ROOT_USER }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_ROOT_PASSWORD }}
-          AWS_REGION: us-east-1
-          S3_ENDPOINT: ${{ secrets.MINIO_URL }}
-        with:
-          args: --recursive --acl public-read
-          source: './frontend/dist'
-          dest: 's3://${{ env.MINIO_BUCKET }}/modules/vpn'
+        run: |
+          mc alias set nkz "${{ secrets.MINIO_URL }}" "${{ secrets.MINIO_ROOT_USER }}" "${{ secrets.MINIO_ROOT_PASSWORD }}"
+          mc cp --recursive ./frontend/dist/ nkz/${{ env.MINIO_BUCKET }}/modules/vpn/
+          mc anonymous set public nkz/${{ env.MINIO_BUCKET }}/modules/vpn/nekazari-module.js
