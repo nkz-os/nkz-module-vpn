@@ -10,7 +10,10 @@
     "step3": "En dispositivos KLinux (rovers, gateways), se genera automáticamente una clave pre-auth de Tailscale.",
     "step4": "El dispositivo se conecta a la SDN Headscale y aparece en línea.",
     "step5": "Sensores ESP32 se conectan por MQTT mTLS — sin clave VPN.",
-    "provisionedDevices": "Dispositivos aprovisionados"
+    "provisionedDevices": "Dispositivos aprovisionados",
+    "quotaBadge": "{{used}}/{{max}} dispositivos",
+    "quotaFull": "Límite de dispositivos alcanzado ({{used}}/{{max}})",
+    "quotaWarning": "Acercándose al límite de dispositivos"
   },
   "list": {
     "typeRover": "Rover",
@@ -34,7 +37,10 @@
     "empty": "Aún no hay dispositivos.",
     "emptyHint": "Usa «Añadir dispositivo» para activar el primero.",
     "revokeConfirm": "¿Revocar «{{name}}»? El dispositivo se desconectará al instante.",
-    "revokeFailed": "No se pudo revocar el dispositivo: {{message}}"
+    "revokeFailed": "No se pudo revocar el dispositivo: {{message}}",
+    "tenant": "Tenant",
+    "allTenants": "Todos los tenants",
+    "myTenant": "Mi tenant"
   },
   "wizard": {
     "title": "Activar dispositivo",
@@ -61,7 +67,11 @@
     "close": "Cerrar",
     "errorTitle": "Activación fallida",
     "tryAgain": "Intentar de nuevo",
-    "errorGeneric": "Fallo de activación"
+    "errorGeneric": "Fallo de activación",
+    "errorRateLimit": "Demasiados intentos. Espera antes de volver a intentarlo.",
+    "errorQuotaExceeded": "Límite de dispositivos excedido ({{used}}/{{max}}). Contacta con tu administrador.",
+    "errorDeviceAlreadyActivated": "Este dispositivo ya ha sido activado.",
+    "errorDeviceRevoked": "Este dispositivo ha sido revocado y no puede reactivarse."
   },
   "context": {
     "notInSdn": "No está en la SDN",
@@ -79,5 +89,24 @@
     "active": "{{n}} activos",
     "pending": "{{n}} pendientes",
     "empty": "Aún no hay dispositivos aprovisionados."
+  },
+  "factory": {
+    "title": "Fábrica — Pre-registrar dispositivo",
+    "description": "Registra un nuevo dispositivo y genera su Claim Code para imprimir en el chasis.",
+    "registerDevice": "Registrar dispositivo",
+    "registerSuccess": "Dispositivo registrado. Claim Code: {{code}}",
+    "uuidLabel": "UUID del dispositivo",
+    "typeLabel": "Tipo de dispositivo",
+    "tenantLabel": "ID del tenant",
+    "nameLabel": "Nombre del dispositivo (opcional)",
+    "registering": "Registrando..."
+  },
+  "revoke": {
+    "title": "Revocar dispositivo",
+    "confirmInstruction": "Escribe \"{{name}}\" para confirmar la revocación.",
+    "consequences": "Esto desconectará inmediatamente el dispositivo de la SDN. No podrá reactivarse.",
+    "confirmPlaceholder": "Escribe el nombre del dispositivo para confirmar",
+    "confirm": "Revocar dispositivo",
+    "cancel": "Cancelar"
   }
 }
