@@ -20,7 +20,7 @@ from sqlalchemy import select
 
 from app.db.database import get_db
 from app.middleware.auth import require_auth, get_tenant_id
-from app.models import ProvisionedDevice
+from app.models import ProvisionedDevice, DEVICE_TYPE_TO_NGSI_TYPE
 from app.services import claim_code as cc_service
 from app.services import headscale as hs_service
 from app.services import entity_manager as em_service
@@ -166,13 +166,8 @@ async def claim_device(
             reusable=False,
         )
 
-    # SOTA Type Mapping
-    type_map = {
-        "rover": "AgriculturalRobot",
-        "gateway": "AgriSensor",
-        "sensor_esp32": "AgriSensor",
-    }
-    ngsi_type = type_map.get(device.device_type, "AgriSensor")
+    # SOTA Type Mapping — from canonical source in models.py
+    ngsi_type = DEVICE_TYPE_TO_NGSI_TYPE.get(device.device_type, "Device")
     ngsi_entity_id = f"urn:ngsi-ld:{ngsi_type}:{device.uuid}"
 
     # Marcar como CONSUMED

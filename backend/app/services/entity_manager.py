@@ -35,17 +35,13 @@ async def create_ngsi_entity(
     """
     url = f"{settings.ENTITY_MANAGER_URL}/api/entities"
 
-    # Ensure FIWARE Smart Data Models compliance
-    # Map generic device types to valid NGSI-LD types
-    normalized_type = entity_type
-    if device_type.lower() in ["robot", "ros", "zenoh", "tractor", "agv"]:
-        normalized_type = "AgriculturalMachine"
-    elif device_type.lower() in ["sensor", "gateway"]:
-        normalized_type = "Device"
+    # The caller is responsible for mapping device_type → NGSI-LD type
+    # using DEVICE_TYPE_TO_NGSI_TYPE from models.py.
+    # entity_type already contains the correct SDM type.
 
     payload = {
         "id": entity_id,
-        "type": normalized_type,
+        "type": entity_type,
         # Standard NGSI-LD attributes
         "name": {
             "type": "Property",
