@@ -4,6 +4,7 @@ import { useTranslation } from '@nekazari/sdk';
 import { vpnApi } from '../services/api';
 import { DeviceList } from '../components/DeviceList';
 import { AddDeviceWizard } from '../components/AddDeviceWizard';
+import { FactoryPanel } from '../components/FactoryPanel';
 
 /**
  * Main page for the VPN / Device Management module.
@@ -15,6 +16,8 @@ export const DevicesPage: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [quota, setQuota] = useState<{ used: number; max: number } | null>(null);
+  const isPlatformAdmin = (window as any).__nekazariAuthContext?.roles?.includes('PlatformAdmin') ?? false;
+  const [allTenants, setAllTenants] = useState(false);
 
   const handleSuccess = useCallback(() => {
     setRefreshTrigger(t => t + 1);
@@ -44,6 +47,19 @@ export const DevicesPage: React.FC = () => {
               <p className="text-sm text-gray-500">{t('page.subtitle')}</p>
             </div>
           </div>
+
+          {isPlatformAdmin && (
+            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-0.5">
+              <button onClick={() => setAllTenants(false)}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${!allTenants ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {t('list.myTenant')}
+              </button>
+              <button onClick={() => setAllTenants(true)}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${allTenants ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {t('list.allTenants')}
+              </button>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             {quota && (
@@ -93,7 +109,7 @@ export const DevicesPage: React.FC = () => {
         {/* Device table */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">{t('page.provisionedDevices')}</h2>
-          <DeviceList refreshTrigger={refreshTrigger} />
+          <DeviceList refreshTrigger={refreshTrigger} allTenants={allTenants} isPlatformAdmin={isPlatformAdmin} />
         </div>
       </div>
 
