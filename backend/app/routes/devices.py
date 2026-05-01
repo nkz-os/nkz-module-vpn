@@ -25,6 +25,7 @@ from app.services import claim_code as cc_service
 from app.services import headscale as hs_service
 from app.services import entity_manager as em_service
 from app.services import tenant_limits as tl_service
+from app.services import audit as audit_service
 from app.config import settings
 from app.middleware.rate_limit import limiter
 
@@ -224,6 +225,14 @@ async def claim_device(
     device.ngsi_entity_id = ngsi_entity_id
     device.provisioned_at = datetime.now(timezone.utc)
 
+    # Audit log
+    actor_sub = payload.get("sub", "unknown")
+    ip = request.client.host if request.client else None
+    await audit_service.log_event(
+        db, tenant_id=tenant_id, device_uuid=device.uuid,
+        action="CLAIMED", actor_sub=actor_sub, ip_address=ip,
+    )
+
     logger.info(
         "Device %s (%s) claimed by tenant %s", device.uuid, device.device_type, tenant_id
     )
@@ -303,6 +312,7 @@ async def device_status(
 )
 async def revoke_device(
     device_uuid: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     payload: dict = Depends(require_auth),
     tenant_id: str = Depends(get_tenant_id),
@@ -322,4 +332,13 @@ async def revoke_device(
             logger.error(f"Failed to delete Headscale peer for {device_uuid}: {e}")
 
     device.state = "REVOKED"
+
+    # Audit log
+    actor_sub = payload.get("sub", "unknown")
+    ip = request.client.host if request.client else None
+    await audit_service.log_event(
+        db, tenant_id=tenant_id, device_uuid=device.uuid,
+        action="REVOKED", actor_sub=actor_sub, ip_address=ip,
+    )
+
     logger.warning(f"Device {device_uuid} revoked by tenant {tenant_id}")

@@ -16,7 +16,7 @@ Flujo de fábrica para ESP32 (sensor):
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -26,6 +26,7 @@ from app.middleware.auth import require_factory_role
 from app.models import ProvisionedDevice
 from app.services import claim_code as cc_service
 from app.services import pki as pki_service
+from app.services import audit as audit_service
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -98,6 +99,7 @@ async def sign_csr(
 )
 async def register_device(
     req: RegisterDeviceRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     _payload: dict = Depends(require_factory_role),
 ):
@@ -136,6 +138,13 @@ async def register_device(
         state="PENDING",
     )
     db.add(device)
+
+    # Audit log
+    actor_sub = _payload.get("sub", "unknown")
+    await audit_service.log_event(
+        db, tenant_id=req.tenant_id, device_uuid=req.device_uuid,
+        action="REGISTERED", actor_sub=actor_sub, ip_address=None,
+    )
 
     logger.info(f"Device {req.device_uuid} ({req.device_type}) registered for tenant {req.tenant_id}")
 
