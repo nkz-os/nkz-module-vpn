@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.db.database import get_db
 from app.middleware.auth import require_auth, get_tenant_id
@@ -56,6 +56,7 @@ class DeviceStatusResponse(BaseModel):
     headscale_peer_id: str | None
     online: bool
     last_seen: str | None
+    tenant_id: str | None = None
 
 
 class DeviceListResponse(BaseModel):
@@ -69,15 +70,27 @@ class DeviceListResponse(BaseModel):
     summary="Lista todos los dispositivos del tenant",
 )
 async def list_devices(
+    request: Request,
+    all_tenants: bool = False,
     db: AsyncSession = Depends(get_db),
     payload: dict = Depends(require_auth),
     tenant_id: str = Depends(get_tenant_id),
 ):
-    result = await db.execute(
-        select(ProvisionedDevice)
-        .where(ProvisionedDevice.tenant_id == tenant_id)
-        .order_by(ProvisionedDevice.created_at.desc())
-    )
+    roles = payload.get("realm_access", {}).get("roles", [])
+    is_platform_admin = "PlatformAdmin" in roles
+
+    if all_tenants and is_platform_admin:
+        await db.execute(text("SET app.current_tenant_id = '__platform__'"))
+        result = await db.execute(
+            select(ProvisionedDevice)
+            .order_by(ProvisionedDevice.created_at.desc())
+        )
+    else:
+        result = await db.execute(
+            select(ProvisionedDevice)
+            .where(ProvisionedDevice.tenant_id == tenant_id)
+            .order_by(ProvisionedDevice.created_at.desc())
+        )
     devices = result.scalars().all()
     return DeviceListResponse(
         devices=[
@@ -89,6 +102,7 @@ async def list_devices(
                 headscale_peer_id=d.headscale_peer_id,
                 online=False,   # real-time status via /devices/{uuid}/status
                 last_seen=None,
+                tenant_id=d.tenant_id if is_platform_admin and all_tenants else None,
             )
             for d in devices
         ],
@@ -251,6 +265,7 @@ async def claim_device(
 )
 async def device_status(
     device_uuid: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     payload: dict = Depends(require_auth),
     tenant_id: str = Depends(get_tenant_id),
