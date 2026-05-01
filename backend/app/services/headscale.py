@@ -54,8 +54,13 @@ async def ensure_user_exists(tenant_id: str) -> dict:
         return await _get(f"/api/v1/user/{tenant_id}")
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
-            logger.info(f"Creating Headscale user for tenant {tenant_id}")
-            return await _post("/api/v1/user", {"name": tenant_id})
+            logger.info("Creating Headscale user for tenant %s", tenant_id)
+            result = await _post("/api/v1/user", {"name": tenant_id})
+            logger.info(
+                "Headscale user %s created. Add tag:tenant-%s to ACLs.",
+                tenant_id, tenant_id,
+            )
+            return result
         raise
 
 
