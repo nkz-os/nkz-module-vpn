@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Wifi, Plus, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@nekazari/sdk';
+import { vpnApi } from '../services/api';
 import { DeviceList } from '../components/DeviceList';
 import { AddDeviceWizard } from '../components/AddDeviceWizard';
 
@@ -13,6 +14,7 @@ export const DevicesPage: React.FC = () => {
   const { t } = useTranslation('vpn');
   const [showWizard, setShowWizard] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [quota, setQuota] = useState<{ used: number; max: number } | null>(null);
 
   const handleSuccess = useCallback(() => {
     setRefreshTrigger(t => t + 1);
@@ -21,6 +23,12 @@ export const DevicesPage: React.FC = () => {
   const handleRefresh = useCallback(() => {
     setRefreshTrigger(t => t + 1);
   }, []);
+
+  useEffect(() => {
+    vpnApi.listDevices().then(d => {
+      setQuota({ used: d.total, max: 50 });
+    }).catch(() => {});
+  }, [refreshTrigger]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -37,7 +45,20 @@ export const DevicesPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {quota && (
+              <span className={`
+                text-xs font-medium px-2.5 py-1 rounded-full
+                ${quota.used >= quota.max
+                  ? 'bg-red-100 text-red-700'
+                  : quota.used >= quota.max * 0.8
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-gray-100 text-gray-600'
+                }
+              `}>
+                {t('page.quotaBadge', { used: quota.used, max: quota.max })}
+              </span>
+            )}
             <button
               onClick={handleRefresh}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -47,7 +68,9 @@ export const DevicesPage: React.FC = () => {
             </button>
             <button
               onClick={() => setShowWizard(true)}
-              className="flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm"
+              disabled={quota ? quota.used >= quota.max : false}
+              className="flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title={quota && quota.used >= quota.max ? t('page.quotaFull', { used: quota.used, max: quota.max }) : undefined}
             >
               <Plus className="w-4 h-4" />
               {t('page.addDevice')}
