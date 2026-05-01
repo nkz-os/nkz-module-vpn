@@ -32,10 +32,10 @@ async def get_db(request: Request):
     """Dependency de FastAPI para inyectar sesión de BD con tenant context."""
     async with AsyncSessionLocal() as session:
         tenant_id = getattr(request.state, 'tenant_id', None) if request else None
-        if tenant_id:
-            await session.execute(
-                text("SET app.current_tenant_id = :tid"), {"tid": tenant_id}
-            )
+        await session.execute(
+            text("SET app.current_tenant_id = :tid"),
+            {"tid": tenant_id or ""},
+        )
         try:
             yield session
             await session.commit()
