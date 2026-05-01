@@ -106,6 +106,11 @@ export const DevicesPage: React.FC = () => {
           </ol>
         </div>
 
+        {/* Factory panel — PlatformAdmin only */}
+        {isPlatformAdmin && (
+          <FactoryPanel onSuccess={handleSuccess} />
+        )}
+
         {/* Device table */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">{t('page.provisionedDevices')}</h2>
