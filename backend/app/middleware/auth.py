@@ -19,13 +19,14 @@ logger = logging.getLogger(__name__)
 _jwks_client: Optional[PyJWKClient] = None
 security = HTTPBearer()
 
-JWKS_URL = f"{settings.JWT_ISSUER}/protocol/openid-connect/certs"
+def get_jwks_url() -> str:
+    return f"{settings.jwt_issuer_url}/protocol/openid-connect/certs"
 
 
 def get_jwks_client() -> PyJWKClient:
     global _jwks_client
     if _jwks_client is None:
-        _jwks_client = PyJWKClient(JWKS_URL)
+        _jwks_client = PyJWKClient(get_jwks_url())
     return _jwks_client
 
 
@@ -35,7 +36,7 @@ async def verify_token(token: str) -> dict:
         token_issuer = unverified.get("iss")
 
         # Fallo duro — nunca continuar con issuer incorrecto
-        if token_issuer != settings.JWT_ISSUER:
+        if token_issuer != settings.jwt_issuer_url:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token issuer",
@@ -48,7 +49,7 @@ async def verify_token(token: str) -> dict:
             token,
             signing_key.key,
             algorithms=[settings.JWT_ALGORITHM],
-            issuer=settings.JWT_ISSUER,
+            issuer=settings.jwt_issuer_url,
             options={"verify_exp": True, "verify_iss": True},
         )
         return payload
