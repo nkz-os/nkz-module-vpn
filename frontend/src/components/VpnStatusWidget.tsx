@@ -36,7 +36,7 @@ export const VpnStatusWidget: React.FC = () => {
   if (error) {
     return (
       <div className="bg-white rounded-xl border border-red-100 p-4">
-        <p className="text-xs text-red-500">Could not load device status</p>
+        <p className="text-xs text-red-500">{t('widget.loadError')}</p>
       </div>
     );
   }

@@ -78,7 +78,7 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
       <div className="flex items-center gap-2">
         {device.state === 'CONSUMED' ? (
           isEsp32 ? (
-            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">mTLS Connected</span>
+            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{t('context.mtlsConnected')}</span>
           ) : device.online ? (
             <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
               <Wifi className="w-3 h-3" /> {t('list.online')}
@@ -101,7 +101,7 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
       {!isEsp32 && device.last_seen && (
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <Clock className="w-3 h-3" />
-          Last seen: {new Date(device.last_seen).toLocaleString()}
+          {t('context.lastSeen', { date: new Date(device.last_seen).toLocaleString() })}
         </div>
       )}
 
