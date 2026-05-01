@@ -5,6 +5,8 @@ All deployment-specific values (domains, URLs, secrets) must be provided
 via environment variables or Kubernetes Secrets — never hardcoded here.
 """
 
+import os
+
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -18,14 +20,20 @@ class Settings(BaseSettings):
     # Keycloak — validación JWT (set via env var or K8s ConfigMap)
     KEYCLOAK_URL: str = "http://keycloak:8080/auth"
     KEYCLOAK_REALM: str = "nekazari"
-    JWT_ISSUER: str = ""   # Derived from KEYCLOAK_URL + realm if empty
     JWT_ALGORITHM: str = "RS256"
 
     @property
     def jwt_issuer_url(self) -> str:
-        if self.JWT_ISSUER:
-            return self.JWT_ISSUER
-        return f"{self.KEYCLOAK_URL}/realms/{self.KEYCLOAK_REALM}"
+        """Derive issuer from KEYCLOAK_URL + realm, or from explicit JWT_ISSUER env var."""
+        explicit = os.getenv("JWT_ISSUER", "")
+        if explicit:
+            return explicit
+        if self.KEYCLOAK_URL:
+            return f"{self.KEYCLOAK_URL}/realms/{self.KEYCLOAK_REALM}"
+        raise RuntimeError(
+            "Neither JWT_ISSUER nor KEYCLOAK_URL is configured. "
+            "The service cannot validate tokens without an issuer URL."
+        )
 
     @property
     def jwks_url(self) -> str:
