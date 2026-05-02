@@ -11,10 +11,13 @@ export const DeviceQuotaWidget: React.FC = () => {
   const [maxDevices, setMaxDevices] = useState(50);
 
   useEffect(() => {
-    vpnApi.listDevices()
-      .then(d => { setDevices(d.devices); setMaxDevices(d.max_devices || 50); })
+    const fetch = () => vpnApi.listDevices()
+      .then(d => { setDevices(d.devices); setMaxDevices(d.max_devices || 50); setError(false); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
+    fetch();
+    const interval = setInterval(fetch, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (error) {

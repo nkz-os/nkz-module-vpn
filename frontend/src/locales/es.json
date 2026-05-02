@@ -12,8 +12,7 @@
     "step5": "Sensores ESP32 se conectan por MQTT mTLS — sin clave VPN.",
     "provisionedDevices": "Dispositivos aprovisionados",
     "quotaBadge": "{{used}}/{{max}} dispositivos",
-    "quotaFull": "Límite de dispositivos alcanzado ({{used}}/{{max}})",
-    "quotaWarning": "Acercándose al límite de dispositivos"
+    "quotaFull": "Límite de dispositivos alcanzado ({{used}}/{{max}})"
   },
   "list": {
     "typeRover": "Rover",
@@ -36,7 +35,6 @@
     "retry": "Reintentar",
     "empty": "Aún no hay dispositivos.",
     "emptyHint": "Usa «Añadir dispositivo» para activar el primero.",
-    "revokeConfirm": "¿Revocar «{{name}}»? El dispositivo se desconectará al instante.",
     "revokeFailed": "No se pudo revocar el dispositivo: {{message}}",
     "tenant": "Tenant",
     "allTenants": "Todos los tenants",
@@ -71,7 +69,8 @@
     "errorRateLimit": "Demasiados intentos. Espera antes de volver a intentarlo.",
     "errorQuotaExceeded": "Límite de dispositivos excedido ({{used}}/{{max}}). Contacta con tu administrador.",
     "errorDeviceAlreadyActivated": "Este dispositivo ya ha sido activado.",
-    "errorDeviceRevoked": "Este dispositivo ha sido revocado y no puede reactivarse."
+    "errorDeviceRevoked": "Este dispositivo ha sido revocado y no puede reactivarse.",
+    "claimUpperHint": "Las letras se convierten a mayúsculas automáticamente."
   },
   "context": {
     "notInSdn": "No está en la SDN",
@@ -105,8 +104,9 @@
     "title": "Revocar dispositivo",
     "confirmInstruction": "Escribe \"{{name}}\" para confirmar la revocación.",
     "consequences": "Esto desconectará inmediatamente el dispositivo de la SDN. No podrá reactivarse.",
-    "confirmPlaceholder": "Escribe el nombre del dispositivo para confirmar",
+    "confirmPlaceholder": "Escribe \"{{name}}\" para confirmar",
     "confirm": "Revocar dispositivo",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "confirming": "Revocando…"
   }
 }

@@ -30,7 +30,9 @@ export const DevicesPage: React.FC = () => {
   useEffect(() => {
     vpnApi.listDevices().then(d => {
       setQuota({ used: d.total, max: d.max_devices || 50 });
-    }).catch(() => {});
+    }).catch(() => {
+      setQuota(null);
+    });
   }, [refreshTrigger]);
 
   return (
@@ -84,7 +86,7 @@ export const DevicesPage: React.FC = () => {
             </button>
             <button
               onClick={() => setShowWizard(true)}
-              disabled={quota ? quota.used >= quota.max : false}
+              disabled={!quota || quota.used >= quota.max}
               className="flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               title={quota && quota.used >= quota.max ? t('page.quotaFull', { used: quota.used, max: quota.max }) : undefined}
             >

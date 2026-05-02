@@ -66,7 +66,17 @@ export const AddDeviceWizard: React.FC<Props> = ({ onClose, onSuccess }) => {
 
   const copyKey = () => {
     if (result?.preauth_key) {
-      navigator.clipboard.writeText(result.preauth_key);
+      try {
+        navigator.clipboard.writeText(result.preauth_key);
+      } catch {
+        // Fallback for non-HTTPS environments
+        const el = document.createElement('textarea');
+        el.value = result.preauth_key;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -101,6 +111,8 @@ export const AddDeviceWizard: React.FC<Props> = ({ onClose, onSuccess }) => {
                   value={uuid}
                   onChange={e => setUuid(e.target.value)}
                   placeholder={t('wizard.uuidPh')}
+                  pattern="[a-fA-F0-9:.-]+"
+                  title="UUID: hexadecimal digits, colons, dots, or hyphens"
                   required
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
@@ -118,7 +130,7 @@ export const AddDeviceWizard: React.FC<Props> = ({ onClose, onSuccess }) => {
                   required
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                <p className="text-xs text-gray-400 mt-1">{t('wizard.claimHint')}</p>
+                <p className="text-xs text-gray-400 mt-1">{t('wizard.claimHint')} — {t('wizard.claimUpperHint')}</p>
               </div>
 
               <div>

@@ -12,8 +12,7 @@
     "step5": "ESP32 sensors connect via MQTT mTLS — no VPN key needed.",
     "provisionedDevices": "Provisioned devices",
     "quotaBadge": "{{used}}/{{max}} devices",
-    "quotaFull": "Device quota reached ({{used}}/{{max}})",
-    "quotaWarning": "Approaching device limit"
+    "quotaFull": "Device quota reached ({{used}}/{{max}})"
   },
   "list": {
     "typeRover": "Rover",
@@ -36,7 +35,6 @@
     "retry": "Retry",
     "empty": "No devices yet.",
     "emptyHint": "Use “Add device” to activate the first one.",
-    "revokeConfirm": "Revoke “{{name}}”? This will disconnect the device immediately.",
     "revokeFailed": "Failed to revoke device: {{message}}",
     "tenant": "Tenant",
     "allTenants": "All tenants",
@@ -71,7 +69,8 @@
     "errorRateLimit": "Too many attempts. Please wait before trying again.",
     "errorQuotaExceeded": "Device quota exceeded ({{used}}/{{max}}). Contact your administrator.",
     "errorDeviceAlreadyActivated": "This device has already been activated.",
-    "errorDeviceRevoked": "This device has been revoked and cannot be reactivated."
+    "errorDeviceRevoked": "This device has been revoked and cannot be reactivated.",
+    "claimUpperHint": "Letters are uppercased automatically."
   },
   "context": {
     "notInSdn": "Not in SDN",
@@ -105,8 +104,9 @@
     "title": "Revoke device",
     "confirmInstruction": "Type \"{{name}}\" to confirm revocation.",
     "consequences": "This will immediately disconnect the device from the SDN. It cannot be reactivated.",
-    "confirmPlaceholder": "Type device name to confirm",
+    "confirmPlaceholder": "Type \"{{name}}\" to confirm",
     "confirm": "Revoke device",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "confirming": "Revoking…"
   }
 }

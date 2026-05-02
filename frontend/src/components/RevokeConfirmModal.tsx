@@ -17,6 +17,12 @@ export const RevokeConfirmModal: React.FC<Props> = ({
   const [typed, setTyped] = useState('');
   const canConfirm = typed === deviceName && !loading;
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && canConfirm) {
+      onConfirm();
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
@@ -44,7 +50,8 @@ export const RevokeConfirmModal: React.FC<Props> = ({
             type="text"
             value={typed}
             onChange={e => setTyped(e.target.value)}
-            placeholder={t('revoke.confirmPlaceholder')}
+            onKeyDown={handleKeyDown}
+            placeholder={t('revoke.confirmPlaceholder', { name: deviceName })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
             autoFocus
           />
@@ -55,7 +62,7 @@ export const RevokeConfirmModal: React.FC<Props> = ({
             </button>
             <button onClick={onConfirm} disabled={!canConfirm}
               className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? '...' : t('revoke.confirm')}
+              {loading ? t('revoke.confirming') : t('revoke.confirm')}
             </button>
           </div>
         </div>

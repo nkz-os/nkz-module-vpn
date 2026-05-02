@@ -14,10 +14,13 @@ export const VpnStatusWidget: React.FC = () => {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    vpnApi.listDevices()
-      .then(d => setDevices(d.devices))
+    const fetch = () => vpnApi.listDevices()
+      .then(d => { setDevices(d.devices); setError(false); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
+    fetch();
+    const interval = setInterval(fetch, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const activated = devices.filter(d => d.state === 'CONSUMED');
