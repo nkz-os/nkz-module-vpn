@@ -1,3 +1,7 @@
+---
+title: Nekazari Zero-Touch Provisioning (VPN) — Developer Guide
+description: How hardware manufacturers, integrators, and robotics developers configure field devices to securely connect to Nekazari Cloud Platform via Headscale SDN
+---
 # Nekazari Zero-Touch Provisioning (VPN) — Developer Guide
 
 This document explains how hardware manufacturers, integrators, and robotics developers must configure their field devices (robots, tractors, gateways) to securely connect to the Nekazari Cloud Platform using our Software-Defined Network (SDN).
