@@ -16,7 +16,6 @@ interface Props {
  */
 export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
   const { t } = useTranslation('vpn');
-  const { t, i18n } = useTranslation('vpn');
   const [device, setDevice] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -49,7 +48,7 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
 
   const formatDate = (ts: string) => {
     try {
-      return new Date(ts).toLocaleString(i18n.language || 'en');
+      return new Date(ts).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
     } catch {
       return ts;
     }
@@ -88,6 +87,8 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
       </div>
     );
   }
+
+  if (!device) return null;
 
   const isEsp32 = device.device_type === 'sensor_esp32';
 
