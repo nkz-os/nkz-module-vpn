@@ -20,7 +20,7 @@ from sqlalchemy import select, text
 
 from app.db.database import get_db
 from app.middleware.auth import require_auth, get_tenant_id
-from app.models import ProvisionedDevice, DEVICE_TYPE_TO_NGSI_TYPE
+from app.models import ProvisionedDevice, DeviceAuditLog, DEVICE_TYPE_TO_NGSI_TYPE
 from app.services import claim_code as cc_service
 from app.services import headscale as hs_service
 from app.services import entity_manager as em_service
@@ -425,5 +425,50 @@ async def revoke_device(
         db, tenant_id=tenant_id, device_uuid=device.uuid,
         action="REVOKED", actor_sub=actor_sub, ip_address=ip,
     )
+
+
+class AuditLogEntry(BaseModel):
+    action: str
+    actor_sub: str
+    ip_address: str | None
+    created_at: str
+
+
+@router.get(
+    "/{device_uuid}/audit-log",
+    response_model=list[AuditLogEntry],
+    summary="Audit log for a device (PlatformAdmin only)",
+)
+async def device_audit_log(
+    device_uuid: str,
+    db: AsyncSession = Depends(get_db),
+    payload: dict = Depends(require_auth),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    """Returns the audit trail for a device. Accessible by PlatformAdmin, or the device's tenant."""
+    roles = payload.get("realm_access", {}).get("roles", [])
+    is_platform_admin = "PlatformAdmin" in roles
+
+    device = await db.get(ProvisionedDevice, device_uuid)
+    if not device:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+    if not is_platform_admin and device.tenant_id != tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    result = await db.execute(
+        select(DeviceAuditLog)
+        .where(DeviceAuditLog.device_uuid == device_uuid)
+        .order_by(DeviceAuditLog.created_at.desc())
+    )
+    entries = result.scalars().all()
+    return [
+        AuditLogEntry(
+            action=e.action,
+            actor_sub=e.actor_sub,
+            ip_address=e.ip_address,
+            created_at=e.created_at.isoformat() if e.created_at else "",
+        )
+        for e in entries
+    ]
 
     logger.warning(f"Device {device_uuid} revoked by tenant {tenant_id}")

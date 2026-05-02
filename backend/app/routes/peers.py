@@ -1,6 +1,8 @@
 """
 Endpoints de consulta de peers SDN para el frontend.
-Usado por el módulo de connectivity para mostrar estado de la red.
+
+DEPRECATED (2026-05-02): El módulo de connectivity fue eliminado (2026-03-23).
+Este endpoint se conserva para uso futuro del módulo de robótica (ROS2/Zenoh).
 """
 
 import logging
