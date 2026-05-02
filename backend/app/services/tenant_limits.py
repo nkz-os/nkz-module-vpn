@@ -14,17 +14,19 @@ DEFAULT_MAX_DEVICES = 50
 
 
 async def get_max_devices(db: AsyncSession, tenant_id: str) -> int:
+    # Use a savepoint so a failed query doesn't abort the outer transaction.
     try:
-        result = await db.execute(
-            text(
-                "SELECT max_devices FROM admin_platform.tenant_limits "
-                "WHERE tenant_id = :tid"
-            ),
-            {"tid": tenant_id},
-        )
-        row = result.fetchone()
-        if row and row[0] is not None:
-            return row[0]
+        async with db.begin_nested():
+            result = await db.execute(
+                text(
+                    "SELECT max_devices FROM admin_platform.tenant_limits "
+                    "WHERE tenant_id = :tid"
+                ),
+                {"tid": tenant_id},
+            )
+            row = result.fetchone()
+            if row and row[0] is not None:
+                return row[0]
     except Exception as e:
         logger.warning(
             "Could not read tenant_limits for %s: %s — using default %d",

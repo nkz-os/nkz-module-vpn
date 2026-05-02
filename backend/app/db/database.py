@@ -32,11 +32,10 @@ async def get_db(request: Request):
     """Dependency de FastAPI para inyectar sesión de BD con tenant context."""
     async with AsyncSessionLocal() as session:
         tenant_id = getattr(request.state, 'tenant_id', None) if request else None
-        # SET does not support parameterized queries in PostgreSQL.
         # tenant_id is sanitized by normalize_tenant_id() → only [a-z0-9_].
         safe_id = tenant_id or ""
         await session.execute(
-            text(f"SET app.current_tenant_id = '{safe_id}'")
+            text(f"SET LOCAL app.current_tenant_id = '{safe_id}'")
         )
         try:
             yield session
