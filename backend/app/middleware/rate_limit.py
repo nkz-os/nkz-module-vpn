@@ -19,9 +19,10 @@ class RateLimiter:
 
     async def _get_redis(self) -> aioredis.Redis:
         if self._redis is None:
-            self._redis = aioredis.from_url(
-                self._redis_url, encoding="utf-8", decode_responses=True
-            )
+            kwargs = {"encoding": "utf-8", "decode_responses": True}
+            if settings.REDIS_PASSWORD:
+                kwargs["password"] = settings.REDIS_PASSWORD
+            self._redis = aioredis.from_url(self._redis_url, **kwargs)
         return self._redis
 
     async def check(

@@ -50,6 +50,7 @@ class Settings(BaseSettings):
 
     # Redis — rate limiting en endpoint /claim
     REDIS_URL: str = "redis://redis-service:6379/0"
+    REDIS_PASSWORD: str = ""  # From redis-secret — Redis requires auth
     CLAIM_RATE_LIMIT_ATTEMPTS: int = 5
     CLAIM_RATE_LIMIT_WINDOW_SECONDS: int = 3600
 
