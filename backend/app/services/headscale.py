@@ -77,14 +77,17 @@ async def create_preauth_key(
     Genera una Pre-Auth Key efímera para que un dispositivo se una a la red SDN.
     Por defecto: 5 minutos de validez, un solo uso.
     """
+    from datetime import datetime, timezone, timedelta
+
     await ensure_user_exists(tenant_id)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)
     data = await _post(
         "/api/v1/preauthkey",
         {
             "user": tenant_id,
             "reusable": reusable,
             "ephemeral": False,
-            "expiration": f"{expiration_minutes}m",
+            "expiration": expires_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
         },
     )
     key = data.get("preAuthKey", {}).get("key")
