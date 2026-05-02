@@ -46,7 +46,11 @@ export const AddDeviceWizard: React.FC<Props> = ({ onClose, onSuccess }) => {
       if (msg.includes('Too many claim attempts')) {
         setErrorMsg(t('wizard.errorRateLimit'));
       } else if (msg.includes('quota exceeded')) {
-        setErrorMsg(t('wizard.errorQuotaExceeded', { used: 0, max: 0 }));
+        const m = msg.match(/\((\d+)\/(\d+)\)/);
+        setErrorMsg(t('wizard.errorQuotaExceeded', {
+          used: m ? m[1] : '?',
+          max: m ? m[2] : '?',
+        }));
       } else if (msg.includes('already activated') || msg.includes('409')) {
         setErrorMsg(t('wizard.errorDeviceAlreadyActivated'));
       } else if (msg.includes('revoked') || msg.includes('410')) {

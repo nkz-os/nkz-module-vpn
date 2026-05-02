@@ -5,7 +5,7 @@
     "refreshTitle": "Refresh",
     "addDevice": "Add device",
     "howItWorks": "How it works",
-    "step1": "Factory flashes the device with its certificate and Claim Code.",
+    "step1": "Each device comes from the factory with a unique certificate and Claim Code printed on its chassis.",
     "step2": "Your team enters the Claim Code from the chassis label on this page.",
     "step3": "For KLinux devices (rovers, gateways), a Tailscale pre-auth key is generated automatically.",
     "step4": "The device connects to the Headscale SDN and appears online.",

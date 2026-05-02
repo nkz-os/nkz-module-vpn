@@ -16,9 +16,11 @@ interface Props {
  */
 export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
   const { t } = useTranslation('vpn');
+  const { t, i18n } = useTranslation('vpn');
   const [device, setDevice] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   // Extract UUID from urn:ngsi-ld:Robot:<uuid> or urn:ngsi-ld:IoTGateway:<uuid>
   const deviceUuid = entityId
@@ -32,15 +34,26 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
     }
     setLoading(true);
     setNotFound(false);
+    setFetchError(false);
     vpnApi.getDeviceStatus(deviceUuid)
       .then(d => setDevice(d))
       .catch(err => {
         if (err.message?.includes('404') || err.message?.includes('not found')) {
           setNotFound(true);
+        } else {
+          setFetchError(true);
         }
       })
       .finally(() => setLoading(false));
   }, [deviceUuid]);
+
+  const formatDate = (ts: string) => {
+    try {
+      return new Date(ts).toLocaleString(i18n.language || 'en');
+    } catch {
+      return ts;
+    }
+  };
 
   if (!deviceUuid) return null;
 
@@ -53,7 +66,7 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
     );
   }
 
-  if (notFound || !device) {
+  if (notFound || (!device && !fetchError)) {
     return (
       <div className="p-3 border-t border-gray-100">
         <div className="flex items-center gap-2 text-gray-400">
@@ -61,6 +74,17 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
           <span className="text-xs">{t('context.notInSdn')}</span>
         </div>
         <p className="text-xs text-gray-400 mt-1">{t('context.notProvisioned')}</p>
+      </div>
+    );
+  }
+
+  if (fetchError && !device) {
+    return (
+      <div className="p-3 border-t border-gray-100">
+        <div className="flex items-center gap-2 text-red-400">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-xs">{t('widget.loadError')}</span>
+        </div>
       </div>
     );
   }
@@ -101,7 +125,7 @@ export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
       {!isEsp32 && device.last_seen && (
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <Clock className="w-3 h-3" />
-          {t('context.lastSeen', { date: new Date(device.last_seen).toLocaleString() })}
+          {t('context.lastSeen', { date: formatDate(device.last_seen) })}
         </div>
       )}
 

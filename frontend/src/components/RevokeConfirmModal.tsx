@@ -7,10 +7,11 @@ interface Props {
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
+  error?: string | null;
 }
 
 export const RevokeConfirmModal: React.FC<Props> = ({
-  deviceName, onConfirm, onCancel, loading,
+  deviceName, onConfirm, onCancel, loading, error,
 }) => {
   const { t } = useTranslation('vpn');
   const [typed, setTyped] = useState('');
@@ -33,6 +34,12 @@ export const RevokeConfirmModal: React.FC<Props> = ({
           <p className="text-sm text-gray-600">
             {t('revoke.confirmInstruction', { name: deviceName })}
           </p>
+          {error && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-xs text-red-600">{error}</p>
+            </div>
+          )}
           <input
             type="text"
             value={typed}

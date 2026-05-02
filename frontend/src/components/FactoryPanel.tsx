@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Factory, Check, AlertCircle } from 'lucide-react';
+import { Factory, Check, AlertCircle, Copy } from 'lucide-react';
 import { useTranslation } from '@nekazari/sdk';
+import { vpnApi } from '../services/api';
 
 interface Props {
   onSuccess: () => void;
@@ -16,6 +17,7 @@ export const FactoryPanel: React.FC<Props> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,28 +25,26 @@ export const FactoryPanel: React.FC<Props> = ({ onSuccess }) => {
     setError('');
     setResult(null);
     try {
-      const res = await fetch('/api/vpn/factory/register-device', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          device_uuid: uuid.trim(),
-          device_type: deviceType,
-          tenant_id: tenantId.trim(),
-          device_name: deviceName.trim() || undefined,
-        }),
+      const data = await vpnApi.registerDevice({
+        device_uuid: uuid.trim(),
+        device_type: deviceType,
+        tenant_id: tenantId.trim(),
+        device_name: deviceName.trim() || undefined,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as any).detail || `Error ${res.status}`);
-      }
-      const data = await res.json();
       setResult(data.claim_code);
       onSuccess();
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message || 'Registration failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyCode = () => {
+    if (result) {
+      navigator.clipboard.writeText(result);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -98,7 +98,10 @@ export const FactoryPanel: React.FC<Props> = ({ onSuccess }) => {
         {result && (
           <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
             <Check className="w-4 h-4 text-green-600" />
-            <span className="text-sm text-green-700 font-mono">{t('factory.registerSuccess', { code: result })}</span>
+            <span className="text-sm text-green-700 font-mono flex-1 truncate">{t('factory.registerSuccess', { code: result })}</span>
+            <button onClick={copyCode} className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-white rounded transition-colors" title={t('wizard.copyTitle')}>
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+            </button>
           </div>
         )}
         {error && (

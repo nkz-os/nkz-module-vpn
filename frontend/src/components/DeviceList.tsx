@@ -49,6 +49,7 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger, allTenants, isPlat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<{ uuid: string; name: string } | null>(null);
   const [liveStatuses, setLiveStatuses] = useState<Record<string, { online: boolean; last_seen: string | null }>>({});
 
@@ -104,7 +105,7 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger, allTenants, isPlat
       setRevokeTarget(null);
       await load();
     } catch (e: any) {
-      alert(t('list.revokeFailed', { message: e.message }));
+      setRevokeError(e.message || t('list.revokeFailed', { message: '' }));
     } finally {
       setRevoking(null);
     }
@@ -229,8 +230,9 @@ export const DeviceList: React.FC<Props> = ({ refreshTrigger, allTenants, isPlat
         <RevokeConfirmModal
           deviceName={revokeTarget.name}
           onConfirm={handleRevokeConfirm}
-          onCancel={() => setRevokeTarget(null)}
+          onCancel={() => { setRevokeTarget(null); setRevokeError(null); }}
           loading={revoking === revokeTarget.uuid}
+          error={revokeError}
         />
       )}
     </div>

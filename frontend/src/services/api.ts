@@ -110,6 +110,20 @@ class VpnApiClient {
   getAuditLog(uuid: string): Promise<AuditLogEntry[]> {
     return this.request(`/devices/${encodeURIComponent(uuid)}/audit-log`);
   }
+
+  /** Pre-register a device in factory and return its Claim Code (Factory/PlatformAdmin) */
+  registerDevice(req: { device_uuid: string; device_type: string; tenant_id: string; device_name?: string }): Promise<RegisterDeviceResponse> {
+    return this.request('/factory/register-device', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  }
+}
+
+export interface RegisterDeviceResponse {
+  claim_code: string;
+  device_uuid: string;
+  device_type: string;
 }
 
 export interface AuditLogEntry {

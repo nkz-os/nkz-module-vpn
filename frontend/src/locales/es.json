@@ -5,7 +5,7 @@
     "refreshTitle": "Actualizar",
     "addDevice": "Añadir dispositivo",
     "howItWorks": "Cómo funciona",
-    "step1": "Fábrica graba el dispositivo con su certificado y código de emparejamiento (Claim Code).",
+    "step1": "Cada dispositivo viene de fábrica con un certificado único y un Claim Code impreso en el chasis.",
     "step2": "Tu equipo introduce el Claim Code de la etiqueta del chasis en esta página.",
     "step3": "En dispositivos KLinux (rovers, gateways), se genera automáticamente una clave pre-auth de Tailscale.",
     "step4": "El dispositivo se conecta a la SDN Headscale y aparece en línea.",
