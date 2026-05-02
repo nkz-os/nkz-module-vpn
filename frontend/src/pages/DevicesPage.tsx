@@ -29,7 +29,7 @@ export const DevicesPage: React.FC = () => {
 
   useEffect(() => {
     vpnApi.listDevices().then(d => {
-      setQuota({ used: d.total, max: 50 });
+      setQuota({ used: d.total, max: d.max_devices || 50 });
     }).catch(() => {});
   }, [refreshTrigger]);
 

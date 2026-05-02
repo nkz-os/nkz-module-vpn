@@ -76,6 +76,7 @@ class DeviceStatusResponse(BaseModel):
 class DeviceListResponse(BaseModel):
     devices: list[DeviceStatusResponse]
     total: int
+    max_devices: int = 50
 
 
 @router.get(
@@ -109,6 +110,7 @@ async def list_devices(
             .order_by(ProvisionedDevice.created_at.desc())
         )
     devices = result.scalars().all()
+    max_devs = await tl_service.get_max_devices(db, tenant_id)
     return DeviceListResponse(
         devices=[
             DeviceStatusResponse(
@@ -124,6 +126,7 @@ async def list_devices(
             for d in devices
         ],
         total=len(devices),
+        max_devices=max_devs,
     )
 
 

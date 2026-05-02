@@ -26,6 +26,7 @@ export interface Device {
 export interface DeviceListResponse {
   devices: Device[];
   total: number;
+  max_devices: number;
 }
 
 export interface ClaimRequest {
