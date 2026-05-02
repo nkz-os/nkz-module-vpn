@@ -49,6 +49,19 @@ class ClaimResponse(BaseModel):
     state: str
 
 
+class ValidateRequest(BaseModel):
+    device_uuid: str
+    claim_code: str
+
+
+class ValidateResponse(BaseModel):
+    valid: bool
+    device_uuid: str
+    device_type: str
+    device_name: str | None
+    state: str
+
+
 class DeviceStatusResponse(BaseModel):
     device_uuid: str
     device_type: str
@@ -266,6 +279,72 @@ async def claim_device(
         preauth_key=preauth_key,
         login_server=settings.HEADSCALE_PUBLIC_URL or None,
         ngsi_entity_id=ngsi_entity_id,
+        state=device.state,
+    )
+
+
+@router.post(
+    "/validate",
+    response_model=ValidateResponse,
+    summary="Valida un Claim Code sin consumirlo",
+)
+async def validate_device(
+    req: ValidateRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    payload: dict = Depends(require_auth),
+    tenant_id: str = Depends(get_tenant_id),
+):
+    """
+    Valida un Claim Code sin cambiar el estado del dispositivo.
+    Usado por el módulo robotics para verificar antes del provisioning unificado.
+
+    NO consume el código — el claim real se hace desde /devices/claim.
+    """
+    device = await db.get(ProvisionedDevice, req.device_uuid)
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found",
+        )
+
+    if device.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Device does not belong to your tenant",
+        )
+
+    if device.state == "CONSUMED":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Device already activated",
+        )
+
+    if device.state == "REVOKED":
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Device has been revoked",
+        )
+
+    # Validar Claim Code (timing-safe)
+    factory_secret = cc_service.get_factory_secret_for_version(
+        device.claim_version, settings
+    )
+    if not cc_service.validate_claim_code(
+        req.device_uuid, req.claim_code, device.claim_code_hash,
+        factory_secret, device.claim_version,
+    ):
+        logger.warning(f"Invalid claim code validation for device {req.device_uuid}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid claim code",
+        )
+
+    return ValidateResponse(
+        valid=True,
+        device_uuid=device.uuid,
+        device_type=device.device_type,
+        device_name=device.device_name,
         state=device.state,
     )
 
