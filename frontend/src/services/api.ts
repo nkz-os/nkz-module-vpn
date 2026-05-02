@@ -105,6 +105,18 @@ class VpnApiClient {
   revokeDevice(uuid: string): Promise<void> {
     return this.request(`/devices/${encodeURIComponent(uuid)}`, { method: 'DELETE' });
   }
+
+  /** Get audit log entries for a device (PlatformAdmin or owning tenant) */
+  getAuditLog(uuid: string): Promise<AuditLogEntry[]> {
+    return this.request(`/devices/${encodeURIComponent(uuid)}/audit-log`);
+  }
+}
+
+export interface AuditLogEntry {
+  action: string;
+  actor_sub: string;
+  ip_address: string | null;
+  created_at: string;
 }
 
 export const vpnApi = new VpnApiClient();
