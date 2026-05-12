@@ -9,3 +9,5 @@ pyjwt[cryptography]==2.9.0
 cryptography==43.0.3
 kubernetes==31.0.0
 redis==5.1.1
+# nkz-platform-sdk — uncomment when published to PyPI or use git dependency:
+# nkz-platform-sdk @ git+https://github.com/nkz-os/nkz.git#subdirectory=services/nkz-platform-sdk
