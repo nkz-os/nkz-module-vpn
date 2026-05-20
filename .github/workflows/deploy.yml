@@ -90,5 +90,5 @@ jobs:
         if: steps.check_secrets.outputs.has_secrets == 'true'
         run: |
           mc alias set nkz "${{ secrets.MINIO_URL }}" "${{ secrets.MINIO_ROOT_USER }}" "${{ secrets.MINIO_ROOT_PASSWORD }}"
-          mc cp --recursive ./dist/ nkz/${{ env.MINIO_BUCKET }}/modules/vpn/
-          mc anonymous set public nkz/${{ env.MINIO_BUCKET }}/modules/vpn/
+          mc cp --recursive ./dist/ nkz/${{ env.MINIO_BUCKET }}/modules/nkz-module-vpn/
+          mc anonymous set public nkz/${{ env.MINIO_BUCKET }}/modules/nkz-module-vpn/
