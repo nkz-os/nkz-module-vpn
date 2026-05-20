@@ -9,7 +9,11 @@ export default defineModule({
   displayName: 'VPN / Devices',
   version: '1.0.0',
   hostApiVersion: '^1.0.0',
-  accent: 'blue',
+  accent: {
+    base: '#3b82f6',
+    soft: '#93c5fd',
+    strong: '#1d4ed8'
+  },
   icon: 'Network',
   main: App,
   route: '/devices',

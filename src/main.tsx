@@ -6,6 +6,6 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <MockProvider module={Module} />
+    <MockProvider module={Module as any} />
   </React.StrictMode>
 );

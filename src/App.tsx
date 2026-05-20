@@ -5,7 +5,7 @@ import './i18n';
 
 export default function App() {
   return (
-    <NKZProvider>
+    <NKZProvider moduleId="nkz-module-vpn">
       <Suspense fallback={<div>Loading...</div>}>
         <DevicesPage />
       </Suspense>
