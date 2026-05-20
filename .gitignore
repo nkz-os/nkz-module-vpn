@@ -18,3 +18,8 @@ frontend/dist/
 *skill*.md
 *handover*.md
 *agent*.md
+
+# Internal Docs
+internal-docs/
+internal-docs-local/
+documents/
