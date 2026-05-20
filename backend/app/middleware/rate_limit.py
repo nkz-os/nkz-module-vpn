@@ -54,4 +54,7 @@ class RateLimiter:
             return True  # Fail open — don't block legitimate traffic
 
 
+    def exempt(self, func):
+        return func
+
 limiter = RateLimiter()

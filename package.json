@@ -4,11 +4,12 @@
   "description": "Device Management (VPN/ZTP) Module for Nekazari Platform",
   "license": "AGPL-3.0-only",
   "type": "module",
-  "main": "./src/App.tsx",
+  "nkz": {
+    "moduleId": "nkz-module-vpn"
+  },
   "scripts": {
     "dev": "vite --port 5005",
     "build": "vite build",
-    "build:module": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
@@ -18,7 +19,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
-    "lucide-react": "^0.424.0"
+    "lucide-react": "^0.424.0",
+    "i18next": "^23.11.0",
+    "react-i18next": "^14.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -29,6 +32,8 @@
     "tailwindcss": "^3.4.4",
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
-    "@nekazari/module-kit": "^0.1.0"
+    "@nekazari/module-builder": "^2.0.3",
+    "@nekazari/module-kit": "^0.6.0",
+    "@nekazari/viewer-kit": "^1.0.0"
   }
 }

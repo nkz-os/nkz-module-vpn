@@ -13,11 +13,10 @@ Este servicio es el ÚNICO autorizado a llamar a la API de Headscale.
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import init_db
-from app.middleware.tenant_context import TenantContextMiddleware
 from app.routes import devices, factory, peers
+from app.middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,6 @@ logging.basicConfig(
 )
 
 from app.config import settings as _s
-ALLOWED_ORIGINS = [o.strip() for o in _s.CORS_ORIGINS.split(",") if o.strip()]
 
 
 @asynccontextmanager
@@ -47,21 +45,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"],
-)
-
-app.add_middleware(TenantContextMiddleware)
-
 app.include_router(devices.router, prefix="/api/vpn")
 app.include_router(factory.router, prefix="/api/vpn")
 app.include_router(peers.router, prefix="/api/vpn")
 
 
 @app.get("/health")
+@limiter.exempt
 async def health():
     return {"status": "healthy", "service": "nkz-network-controller", "version": "1.0.0"}
