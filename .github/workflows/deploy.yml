@@ -63,6 +63,8 @@ jobs:
 
       - name: Build module
         run: npm run build
+        env:
+          NKZ_VERSION_HASH: ${{ github.sha }}
 
       - name: Upload frontend as GitHub Artifact
         uses: actions/upload-artifact@v4
@@ -86,9 +88,20 @@ jobs:
           curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
           chmod +x /usr/local/bin/mc
 
-      - name: Upload to MinIO
+      - name: Upload to MinIO (versioned)
         if: steps.check_secrets.outputs.has_secrets == 'true'
         run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           mc alias set nkz "${{ secrets.MINIO_URL }}" "${{ secrets.MINIO_ROOT_USER }}" "${{ secrets.MINIO_ROOT_PASSWORD }}"
-          mc cp --recursive ./dist/ nkz/${{ env.MINIO_BUCKET }}/modules/nkz-module-vpn/
-          mc anonymous set public nkz/${{ env.MINIO_BUCKET }}/modules/nkz-module-vpn/
+          mc cp --recursive ./dist/ "nkz/${{ env.MINIO_BUCKET }}/modules/nkz-module-vpn/${SHORT_SHA}/"
+          mc anonymous set public "nkz/${{ env.MINIO_BUCKET }}/modules/nkz-module-vpn/${SHORT_SHA}/"
+
+      - name: Activate version
+        if: steps.check_secrets.outputs.has_secrets == 'true'
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          curl -s -X POST "${{ secrets.API_URL }}/api/modules/nkz-module-vpn/deploy" \
+            -H "Content-Type: application/json" \
+            -H "X-Internal-Token: ${{ secrets.NKZ_INTERNAL_TOKEN }}" \
+            -d "{\"version\": \"${SHORT_SHA}\"}" \
+            || echo "WARNING: deploy activation failed (API may not support /deploy yet)"
