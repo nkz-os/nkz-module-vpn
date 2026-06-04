@@ -1,0 +1,203 @@
+build-and-deploy-frontend	Set up job	﻿2026-05-20T16:09:28.4686970Z Current runner version: '2.334.0'
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4723790Z ##[group]Runner Image Provisioner
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4724880Z Hosted Compute Agent
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4725828Z Version: 20260213.493
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4726786Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4727828Z Build Date: 2026-02-13T00:28:41Z
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4729226Z Worker ID: {89c36774-ec0f-4487-9a00-56d169e43127}
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4730343Z Azure Region: eastus
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4731188Z ##[endgroup]
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4733080Z ##[group]Operating System
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4734044Z Ubuntu
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4734705Z 24.04.4
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4735465Z LTS
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4736185Z ##[endgroup]
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4736891Z ##[group]Runner Image
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4737826Z Image: ubuntu-24.04
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4738627Z Version: 20260518.149.1
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4740441Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260518.149/images/ubuntu/Ubuntu2404-Readme.md
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4743213Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260518.149
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4744719Z ##[endgroup]
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4746446Z ##[group]GITHUB_TOKEN Permissions
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4749293Z Contents: read
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4750206Z Metadata: read
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4750900Z Packages: read
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4751641Z ##[endgroup]
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4754892Z Secret source: Actions
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.4756208Z Prepare workflow directory
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.5491829Z Prepare all required actions
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.5544806Z Getting action download info
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:28.9693219Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:29.1392177Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:29.2273561Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build-and-deploy-frontend	Set up job	2026-05-20T16:09:29.4533429Z Complete job name: build-and-deploy-frontend
+build-and-deploy-frontend	Checkout repository	﻿2026-05-20T16:09:29.5278197Z ##[group]Run actions/checkout@v4
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5279593Z with:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5280259Z   repository: nkz-os/nkz-module-vpn
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5281360Z   token: ***
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5281981Z   ssh-strict: true
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5282644Z   ssh-user: git
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5283316Z   persist-credentials: true
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5284073Z   clean: true
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5284745Z   sparse-checkout-cone-mode: true
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5285582Z   fetch-depth: 1
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5286234Z   fetch-tags: false
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5286915Z   show-progress: true
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5287892Z   lfs: false
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5288734Z   submodules: false
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5289829Z   set-safe-directory: true
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5291089Z env:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5291773Z   REGISTRY: ghcr.io
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5292742Z   IMAGE_NAME: nkz-os/nkz-module-vpn/network-controller
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5293916Z   MINIO_BUCKET: nekazari-frontend
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.5294835Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6414558Z Syncing repository: nkz-os/nkz-module-vpn
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6417084Z ##[group]Getting Git version info
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6418367Z Working directory is '/home/runner/work/nkz-module-vpn/nkz-module-vpn'
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6420456Z [command]/usr/bin/git version
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6464404Z git version 2.54.0
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6489016Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6510453Z Temporarily overriding HOME='/home/runner/work/_temp/19e19af5-b231-4957-955b-5815d52dbc93' before making global git config changes
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6512835Z Adding repository directory to the temporary git global config as a safe directory
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6515488Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nkz-module-vpn/nkz-module-vpn
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6556221Z Deleting the contents of '/home/runner/work/nkz-module-vpn/nkz-module-vpn'
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6559974Z ##[group]Initializing the repository
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6564339Z [command]/usr/bin/git init /home/runner/work/nkz-module-vpn/nkz-module-vpn
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6633000Z hint: Using 'master' as the name for the initial branch. This default branch name
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6635226Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6637372Z hint: to use in all of your new repositories, which will suppress this warning,
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6639538Z hint: call:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6640461Z hint:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6641648Z hint: 	git config --global init.defaultBranch <name>
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6643202Z hint:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6644588Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6647058Z hint: 'development'. The just-created branch can be renamed via this command:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6649385Z hint:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6650376Z hint: 	git branch -m <name>
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6651463Z hint:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6652948Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6655695Z Initialized empty Git repository in /home/runner/work/nkz-module-vpn/nkz-module-vpn/.git/
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6658498Z [command]/usr/bin/git remote add origin https://github.com/nkz-os/nkz-module-vpn
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6690072Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6691830Z ##[group]Disabling automatic garbage collection
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6694412Z [command]/usr/bin/git config --local gc.auto 0
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6724450Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6726149Z ##[group]Setting up auth
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6732541Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.6766969Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7078312Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7112159Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7343077Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7377748Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7610362Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7645728Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7647436Z ##[group]Fetching the repository
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:29.7656593Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ba573f47e1fda1ff4118120f490b67db5d9b4508:refs/remotes/origin/main
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0330447Z From https://github.com/nkz-os/nkz-module-vpn
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0332823Z  * [new ref]         ba573f47e1fda1ff4118120f490b67db5d9b4508 -> origin/main
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0364969Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0366770Z ##[group]Determining the checkout info
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0368801Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0373194Z [command]/usr/bin/git sparse-checkout disable
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0415619Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0443609Z ##[group]Checking out the ref
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0447742Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0534148Z Switched to a new branch 'main'
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0536273Z branch 'main' set up to track 'origin/main'.
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0544265Z ##[endgroup]
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0581429Z [command]/usr/bin/git log -1 --format=%H
+build-and-deploy-frontend	Checkout repository	2026-05-20T16:09:30.0604769Z ba573f47e1fda1ff4118120f490b67db5d9b4508
+build-and-deploy-frontend	Setup Node.js	﻿2026-05-20T16:09:30.0898102Z ##[group]Run actions/setup-node@v4
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0899383Z with:
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0900307Z   node-version: 20
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0901059Z   cache: npm
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0901879Z   cache-dependency-path: ./package-lock.json
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0902923Z   always-auth: false
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0903715Z   check-latest: false
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0904735Z   token: ***
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0905435Z env:
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0906116Z   REGISTRY: ghcr.io
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0907055Z   IMAGE_NAME: nkz-os/nkz-module-vpn/network-controller
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0908255Z   MINIO_BUCKET: nekazari-frontend
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.0909378Z ##[endgroup]
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.2757913Z Attempting to download 20...
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:30.8996296Z Acquiring 20.20.2 - x64 from https://github.com/actions/node-versions/releases/download/20.20.2-23521894959/node-20.20.2-linux-x64.tar.gz
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:31.3041162Z Extracting ...
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:31.3173422Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/e045f800-c33b-4f64-8800-e59f0fd0e3ba -f /home/runner/work/_temp/f85d2658-0b9f-452a-8cb4-253ae3689054
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:32.4226270Z Adding to the cache ...
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:33.9081286Z ##[group]Environment details
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:34.1242868Z node: v20.20.2
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:34.1243359Z npm: 10.8.2
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:34.1243633Z yarn: 1.22.22
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:34.1244484Z ##[endgroup]
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:34.1264807Z [command]/opt/hostedtoolcache/node/20.20.2/x64/bin/npm config get cache
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:34.2316848Z /home/runner/.npm
+build-and-deploy-frontend	Setup Node.js	2026-05-20T16:09:34.3124703Z npm cache is not found
+build-and-deploy-frontend	Install dependencies	﻿2026-05-20T16:09:34.3309386Z ##[group]Run npm install --no-audit --no-fund --legacy-peer-deps
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:34.3309953Z ^[[36;1mnpm install --no-audit --no-fund --legacy-peer-deps^[[0m
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:34.3352951Z shell: /usr/bin/bash -e {0}
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:34.3353247Z env:
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:34.3353488Z   REGISTRY: ghcr.io
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:34.3353770Z   IMAGE_NAME: nkz-os/nkz-module-vpn/network-controller
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:34.3354099Z   MINIO_BUCKET: nekazari-frontend
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:34.3354353Z ##[endgroup]
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:41.2070049Z 
+build-and-deploy-frontend	Install dependencies	2026-05-20T16:09:41.2082457Z added 271 packages in 7s
+build-and-deploy-frontend	Type check	﻿2026-05-20T16:09:41.2336669Z ##[group]Run npm run typecheck
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.2336990Z ^[[36;1mnpm run typecheck^[[0m
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.2373107Z shell: /usr/bin/bash -e {0}
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.2373367Z env:
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.2373562Z   REGISTRY: ghcr.io
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.2373832Z   IMAGE_NAME: nkz-os/nkz-module-vpn/network-controller
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.2374161Z   MINIO_BUCKET: nekazari-frontend
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.2374402Z ##[endgroup]
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.3472964Z 
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.3473757Z > nekazari-module-vpn@1.0.0 typecheck
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.3474173Z > tsc --noEmit
+build-and-deploy-frontend	Type check	2026-05-20T16:09:41.3474351Z 
+build-and-deploy-frontend	Build module	﻿2026-05-20T16:09:43.4157745Z ##[group]Run npm run build
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.4158043Z ^[[36;1mnpm run build^[[0m
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.4194631Z shell: /usr/bin/bash -e {0}
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.4194901Z env:
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.4195086Z   REGISTRY: ghcr.io
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.4195351Z   IMAGE_NAME: nkz-os/nkz-module-vpn/network-controller
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.4195718Z   MINIO_BUCKET: nekazari-frontend
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.4195960Z ##[endgroup]
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.5321393Z 
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.5322375Z > nekazari-module-vpn@1.0.0 build
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.5323098Z > vite build
+build-and-deploy-frontend	Build module	2026-05-20T16:09:43.5323339Z 
+build-and-deploy-frontend	Build module	2026-05-20T16:09:44.5734998Z ^[[36mvite v5.4.21 ^[[32mbuilding for production...^[[36m^[[39m
+build-and-deploy-frontend	Build module	2026-05-20T16:09:44.6212406Z transforming...
+build-and-deploy-frontend	Build module	2026-05-20T16:09:44.9333412Z ^[[32m✓^[[39m 12 modules transformed.
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.3983322Z ^[[31mx^[[39m Build failed in 795ms
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.3984362Z ^[[31merror during build:
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4036747Z ^[[31m[nkz-module-builder:manifest] Build failed with 1 error:
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4039496Z node_modules/@nekazari/module-kit/dist/index.js:149:49: ERROR: Could not resolve "@tanstack/react-query"^[[31m
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4041176Z     at failureErrorWithLog (/home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:1472:15)
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4043031Z     at /home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:945:25
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4044307Z     at runOnEndCallbacks (/home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:1315:45)
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4045692Z     at buildResponseToResult (/home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:943:7)
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4046980Z     at /home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:970:16
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4048330Z     at responseCallbacks.<computed> (/home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:622:9)
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4050013Z     at handleIncomingPacket (/home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:677:12)
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4051425Z     at Socket.readFromStdout (/home/runner/work/nkz-module-vpn/nkz-module-vpn/node_modules/esbuild/lib/main.js:600:7)
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4052379Z     at Socket.emit (node:events:524:28)
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4053160Z     at addChunk (node:internal/streams/readable:561:12)^[[39m
+build-and-deploy-frontend	Build module	2026-05-20T16:09:45.4331089Z ##[error]Process completed with exit code 1.
+build-and-deploy-frontend	Post Checkout repository	﻿2026-05-20T16:09:45.4460139Z Post job cleanup.
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5425616Z [command]/usr/bin/git version
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5461908Z git version 2.54.0
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5502752Z Temporarily overriding HOME='/home/runner/work/_temp/f8e27ac9-bee1-4a58-b34c-9e3fa710133e' before making global git config changes
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5503597Z Adding repository directory to the temporary git global config as a safe directory
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5510207Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/nkz-module-vpn/nkz-module-vpn
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5552426Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5585799Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5822995Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5846986Z http.https://github.com/.extraheader
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5859602Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.5890718Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.6130042Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build-and-deploy-frontend	Post Checkout repository	2026-05-20T16:09:45.6166706Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build-and-deploy-frontend	Complete job	﻿2026-05-20T16:09:45.6551028Z Cleaning up orphan processes
+build-and-deploy-frontend	Complete job	2026-05-20T16:09:45.6814943Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

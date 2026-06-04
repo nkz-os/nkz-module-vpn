@@ -37,7 +37,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: ghcr.io/nkz-os/nkz-module-vpn/network-controller:latest
+          image: ghcr.io/nkz-os/nkz-module-vpn/network-controller@sha256:4535ea2e91e447065260b82ca2ba58959df338b7b94e9656f0dbe5252590227e
           imagePullPolicy: Always
           ports:
             - name: http
