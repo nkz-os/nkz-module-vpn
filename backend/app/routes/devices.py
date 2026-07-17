@@ -181,13 +181,15 @@ async def validate_device(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
 
     device_state = entity.get("deviceState", {}).get("value", "PENDING")
-    if device_state in ("CONSUMED", "REVOKED"):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Device is {device_state}")
+    if device_state == "CONSUMED":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Device already activated")
+    if device_state == "REVOKED":
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Device has been revoked")
 
     claim_hash = entity.get("claimCodeHash", {}).get("value")
     claim_version = entity.get("claimVersion", {}).get("value", 1)
     factory_secret = cc_service.get_factory_secret_for_version(claim_version, settings)
-    
+
     if not cc_service.validate_claim_code(req.device_uuid, req.claim_code, claim_hash, factory_secret, claim_version):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid claim code")
 
