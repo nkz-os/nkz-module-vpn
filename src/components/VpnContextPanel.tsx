@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Wifi, WifiOff, Clock, Shield, AlertCircle } from 'lucide-react';
-import { useTranslation } from '@nekazari/sdk';
+import { useTranslation, useViewer } from '@nekazari/sdk';
 import { vpnApi, Device } from '../services/api';
-
-interface Props {
-  /** NGSI-LD entity ID, e.g. "urn:ngsi-ld:Robot:aa:bb:cc:dd:ee:ff" */
-  entityId?: string;
-  entityType?: string;
-}
 
 /**
  * Context-panel slot component.
  * Shown in the right panel when a Robot or IoTGateway entity is selected.
  * Extracts the device UUID from the NGSI-LD entity ID and shows live VPN status.
+ *
+ * The host's context-panel slot never passes flat props (only
+ * additionalProps={{ entityData }}), so this reads the selection via
+ * useViewer() directly instead - this component has no other caller.
  */
-export const VpnContextPanel: React.FC<Props> = ({ entityId }) => {
+export const VpnContextPanel: React.FC = () => {
   const { t } = useTranslation('vpn');
+  const { selectedEntityId: entityId } = useViewer();
   const [device, setDevice] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
