@@ -1,0 +1,42 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.venv/
+*.log
+.DS_Store
+.worktrees/
+frontend/dist/
+
+# AI and Agent communications
+.ai/
+*plan*.md
+*spec*.md
+*skill*.md
+*handover*.md
+*agent*.md
+
+# Internal Docs
+internal-docs/
+internal-docs-local/
+documents/
+docs/superpowers/
+docs/internal/
+docs/plans/
+docs/specs/
+docs/audits/
+*_PLAN.md
+*_SPEC.md
+*HANDOVER*.md
+HANDOFF.md
+CURRENT_STATE.md
+
+# Security: sensitive files
+*.pem
+*.key
+apikey_*.txt
+*.apikey
+*-secret*
