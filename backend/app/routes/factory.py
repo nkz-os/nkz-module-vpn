@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.db.database import get_db
+from app.db.database import get_platform_db
 from app.middleware.auth import require_factory_role
 from app.models import ProvisionedDevice
 from app.services import claim_code as cc_service
@@ -100,7 +100,7 @@ async def sign_csr(
 async def register_device(
     req: RegisterDeviceRequest,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_platform_db),
     _payload: dict = Depends(require_factory_role),
 ):
     """
