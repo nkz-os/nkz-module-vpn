@@ -41,3 +41,22 @@ async def get_db(request: Request):
         except Exception:
             await session.rollback()
             raise
+
+
+# Platform scope of the provisioned_devices RLS policy (platform_bypass).
+PLATFORM_SCOPE = "__platform__"
+
+
+async def get_platform_db():
+    """Session for platform operations (factory registration), which span tenants."""
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            text("SELECT set_config('app.current_tenant_id', :scope, true)"),
+            {"scope": PLATFORM_SCOPE},
+        )
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
