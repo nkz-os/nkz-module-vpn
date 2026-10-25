@@ -1,32 +1,22 @@
 ---
-title: "[Tu Nombre de Módulo Aquí]"
-description: "Escribe aquí una descripción muy breve (1 línea) de lo que hace tu módulo."
+title: "Device Management"
+description: "Zero-touch provisioning of field devices over the platform's self-hosted VPN."
 sidebar:
   order: 1
 ---
 
-# Bienvenido a la Documentación de tu Módulo
+# Device Management
 
-> **¡Atención Desarrollador!** Esta carpeta `/docs` es mágica. Todo lo que escribas aquí se subirá automáticamente al portal público de documentación `nkz-os.org`. Por favor, **no pongas aquí notas privadas ni logs de errores**.
+Activate robots, gateways and sensors with the claim code printed on their chassis.
 
-## ¿Cómo añadir el Logo y un Pantallazo de tu módulo? (Guía Fácil)
+- **Factory registration:** each device is registered for its organisation and gets a claim
+  code (and, for sensors, an MQTT client certificate).
+- **Claim:** the organisation's administrator enters the device UUID and claim code. Robots
+  and gateways receive a single-use VPN key and the command to run on the device.
+- **Network:** devices join the platform's Headscale tailnet and can reach only the
+  platform's Zenoh router and MQTT broker. They never see each other.
+- **Twin:** every claimed device appears in the context broker as an official Smart Data
+  Models entity (`ManufacturingMachine` for robots, `Device` for sensors and gateways).
+- **Revocation** removes the device from the network immediately.
 
-Para que tu módulo luzca profesional en el catálogo de la web oficial, necesitas incluir imágenes. Sigue estos **3 sencillos pasos**:
-
-### Paso 1: Guarda tus imágenes aquí
-Coge tu archivo del logo (por ejemplo, `logo.png`) y el pantallazo de tu aplicación (por ejemplo, `pantallazo.jpg`) y **arrástralos directamente dentro de esta misma carpeta `docs/`**. 
-*(Importante: Ponlos junto a este archivo `index.md`, no crees subcarpetas para las imágenes).*
-
-### Paso 2: Escribe este código
-Copia y pega el código que ves justo debajo, pero cambiando el nombre del archivo por el tuyo real:
-
-```markdown
-<!-- Así se pone el logo: -->
-![Logo de mi módulo](./logo.png)
-
-<!-- Así se pone un pantallazo: -->
-![Vista principal del módulo](./pantallazo.jpg)
-```
-
-### Paso 3: ¡Listo!
-No tienes que hacer nada más. Cuando hagas `git push` a tu rama `main`, nuestro motor central se encargará de descargar tus imágenes automáticamente y las mostrará perfectamente encuadradas en la web oficial.
+Integrators: see the [developer guide](DEVELOPER_GUIDE.md).
