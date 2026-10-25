@@ -1,242 +1,75 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Wifi, WifiOff, Bot, Radio, Cpu, Trash2, RefreshCw, MoreHorizontal } from 'lucide-react';
-import { useTranslation } from '@nekazari/sdk';
-import { vpnApi, Device, DeviceType, DeviceState } from '../services/api';
-import { RevokeConfirmModal } from './RevokeConfirmModal';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Badge, Button, Card, EmptyState, Inline, Spinner, Stack } from '@nekazari/ui-kit';
+import { Cpu, Radio, Router, Trash2 } from 'lucide-react';
+import type { DeviceOut } from '../types/vpn';
+import { NodeStatus, StateBadge } from './StateBadge';
+
+const TYPE_ICON = { rover: Cpu, gateway: Router, sensor: Radio } as const;
 
 interface Props {
-  refreshTrigger: number;
-  allTenants?: boolean;
-  isPlatformAdmin?: boolean;
+  devices: DeviceOut[];
+  loading: boolean;
+  error: number | null;
+  showTenant: boolean;
+  onRetry: () => void;
+  onRevoke: (device: DeviceOut) => void;
 }
 
-const TYPE_ICONS: Record<DeviceType, React.ReactNode> = {
-  rover: <Bot className="w-4 h-4" />,
-  gateway: <Radio className="w-4 h-4" />,
-  sensor_esp32: <Cpu className="w-4 h-4" />,
-};
-
-const STATE_STYLES: Record<DeviceState, string> = {
-  PENDING: 'bg-amber-100 text-amber-800',
-  CONSUMED: 'bg-green-100 text-green-800',
-  REVOKED: 'bg-red-100 text-red-800',
-};
-
-function formatLastSeen(ts: string | null, t: (k: string, opts?: Record<string, unknown>) => string): string {
-  if (!ts) return '—';
-  const d = new Date(ts);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return t('list.timeJustNow');
-  if (diffMin < 60) return t('list.timeMinutesAgo', { n: diffMin });
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return t('list.timeHoursAgo', { n: diffH });
-  return d.toLocaleDateString();
-}
-
-export const DeviceList: React.FC<Props> = ({ refreshTrigger, allTenants, isPlatformAdmin }) => {
+export const DeviceList: React.FC<Props> = ({ devices, loading, error, showTenant, onRetry, onRevoke }) => {
   const { t } = useTranslation('vpn');
-  const typeLabels: Record<DeviceType, string> = useMemo(
-    () => ({
-      rover: t('list.typeRover'),
-      gateway: t('list.typeGateway'),
-      sensor_esp32: t('list.typeEsp32'),
-    }),
-    [t]
-  );
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [revoking, setRevoking] = useState<string | null>(null);
-  const [revokeError, setRevokeError] = useState<string | null>(null);
-  const [revokeTarget, setRevokeTarget] = useState<{ uuid: string; name: string } | null>(null);
-  const [liveStatuses, setLiveStatuses] = useState<Record<string, { online: boolean; last_seen: string | null }>>({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await vpnApi.listDevices(allTenants);
-      setDevices(data.devices);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [allTenants]);
-
-  // Fetch live Headscale status for CONSUMED KLinux devices
-  const fetchLiveStatuses = useCallback(async (devs: Device[]) => {
-    const klinux = devs.filter(d => d.state === 'CONSUMED' && d.headscale_peer_id);
-    const statuses: Record<string, { online: boolean; last_seen: string | null }> = {};
-    await Promise.allSettled(
-      klinux.map(async d => {
-        try {
-          const live = await vpnApi.getDeviceStatus(d.device_uuid);
-          statuses[d.device_uuid] = { online: live.online, last_seen: live.last_seen };
-        } catch {
-          statuses[d.device_uuid] = { online: false, last_seen: null };
-        }
-      })
-    );
-    setLiveStatuses(statuses);
-  }, []);
-
-  useEffect(() => {
-    load().then(() => {});
-  }, [load, refreshTrigger]);
-
-  useEffect(() => {
-    if (devices.length > 0) {
-      fetchLiveStatuses(devices);
-    }
-  }, [devices, fetchLiveStatuses]);
-
-  const handleRevokeClick = (uuid: string, name: string | null) => {
-    setRevokeTarget({ uuid, name: name || uuid });
-  };
-
-  const handleRevokeConfirm = async () => {
-    if (!revokeTarget) return;
-    setRevoking(revokeTarget.uuid);
-    try {
-      await vpnApi.revokeDevice(revokeTarget.uuid);
-      setRevokeTarget(null);
-      await load();
-    } catch (e: any) {
-      setRevokeError(e.message || t('list.revokeFailed', { message: '' }));
-    } finally {
-      setRevoking(null);
-    }
-  };
-
-  if (loading) {
+  if (loading && devices.length === 0) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-      </div>
+      <Inline justify="center">
+        <Spinner />
+      </Inline>
     );
   }
-
-  if (error) {
+  if (error !== null) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 text-sm">{error}</p>
-        <button onClick={load} className="mt-3 text-sm text-sky-600 hover:underline">
-          {t('list.retry')}
-        </button>
-      </div>
+      <EmptyState
+        title={t('list.loadError')}
+        action={<Button variant="secondary" onClick={onRetry}>{t('list.retry')}</Button>}
+      />
     );
   }
-
   if (devices.length === 0) {
-    return (
-      <div className="text-center py-16">
-        <Wifi className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500 text-sm">{t('list.empty')}</p>
-        <p className="text-gray-400 text-xs mt-1">{t('list.emptyHint')}</p>
-      </div>
-    );
+    return <EmptyState title={t('list.empty')} description={t('list.emptyHint')} />;
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            {isPlatformAdmin && allTenants && (
-              <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.tenant')}</th>
-            )}
-            <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colName')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colUuid')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colType')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colState')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colConnectivity')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600">{t('list.colLastSeen')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600 w-12"></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {devices.map(device => {
-            const live = liveStatuses[device.device_uuid];
-            const online = live?.online ?? false;
-            const lastSeen = live?.last_seen ?? device.last_seen;
-            const isEsp32 = device.device_type === 'sensor_esp32';
-
-            return (
-              <tr key={device.device_uuid} className="hover:bg-gray-50 transition-colors">
-                {isPlatformAdmin && allTenants && (
-                  <td className="px-4 py-3 text-xs text-gray-500 font-mono">{(device as any).tenant_id}</td>
+    <Stack gap="inline">
+      {devices.map((device) => {
+        const Icon = TYPE_ICON[device.device_type];
+        return (
+          <Card key={device.device_uuid} padding="sm">
+            <Inline justify="between" align="center" wrap>
+              <Inline gap="stack" align="center">
+                <Icon size={18} />
+                <Stack gap="tight">
+                  <span className="text-nkz-sm font-semibold text-nkz-text-primary">
+                    {device.display_name || t('list.unnamed')}
+                  </span>
+                  <span className="text-nkz-xs font-mono text-nkz-text-secondary break-all">{device.device_uuid}</span>
+                </Stack>
+              </Inline>
+              <Inline gap="inline" align="center" wrap>
+                <Badge>{t(`type.${device.device_type}`)}</Badge>
+                {showTenant && <Badge intent="info">{device.tenant_id}</Badge>}
+                <StateBadge state={device.state} />
+                <NodeStatus device={device} />
+                {device.state !== 'REVOKED' && (
+                  <Button variant="ghost" size="sm" onClick={() => onRevoke(device)}
+                    leadingIcon={<Trash2 size={14} />} aria-label={t('list.revoke')}>
+                    {t('list.revoke')}
+                  </Button>
                 )}
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  {device.device_name || <span className="text-gray-400 italic">{t('list.unnamed')}</span>}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-500 max-w-36 truncate" title={device.device_uuid}>
-                  {device.device_uuid}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="flex items-center gap-1.5 text-gray-700">
-                    {TYPE_ICONS[device.device_type]}
-                    {typeLabels[device.device_type]}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATE_STYLES[device.state]}`}>
-                    {device.state}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {device.state === 'CONSUMED' ? (
-                    isEsp32 ? (
-                      <span className="text-xs text-gray-500">{t('list.mtls')}</span>
-                    ) : (
-                      <span className={`flex items-center gap-1.5 text-xs ${online ? 'text-green-600' : 'text-gray-400'}`}>
-                        {online
-                          ? <><Wifi className="w-3.5 h-3.5" /> {t('list.online')}</>
-                          : <><WifiOff className="w-3.5 h-3.5" /> {t('list.offline')}</>
-                        }
-                      </span>
-                    )
-                  ) : (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-500">
-                  {isEsp32 ? <span className="text-gray-400">—</span> : formatLastSeen(lastSeen, t)}
-                </td>
-                <td className="px-4 py-3">
-                  {device.state !== 'REVOKED' && (
-                    <button
-                      onClick={() => handleRevokeClick(device.device_uuid, device.device_name)}
-                      disabled={revoking === device.device_uuid}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                      title={t('list.revokeTitle')}
-                    >
-                      {revoking === device.device_uuid
-                        ? <MoreHorizontal className="w-4 h-4 animate-pulse" />
-                        : <Trash2 className="w-4 h-4" />
-                      }
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {revokeTarget && (
-        <RevokeConfirmModal
-          deviceName={revokeTarget.name}
-          onConfirm={handleRevokeConfirm}
-          onCancel={() => { setRevokeTarget(null); setRevokeError(null); }}
-          loading={revoking === revokeTarget.uuid}
-          error={revokeError}
-        />
-      )}
-    </div>
+              </Inline>
+            </Inline>
+          </Card>
+        );
+      })}
+    </Stack>
   );
 };
-
-export default DeviceList;

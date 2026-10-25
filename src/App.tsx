@@ -1,14 +1,15 @@
-import React, { Suspense } from 'react';
-import { NKZProvider } from '@nekazari/module-kit';
+/**
+ * Main page of the Device Management module — lazily loaded as `main` by
+ * Module.tsx. Also rendered standalone by `pnpm dev` via src/main.tsx.
+ */
+import React from 'react';
+import './index.css';
 import { DevicesPage } from './pages/DevicesPage';
-import './i18n';
 
-export default function App() {
-  return (
-    <NKZProvider moduleId="nkz-module-vpn">
-      <Suspense fallback={<div>Loading...</div>}>
-        <DevicesPage />
-      </Suspense>
-    </NKZProvider>
-  );
-}
+const App: React.FC = () => (
+  <div className="w-full p-nkz-section">
+    <DevicesPage />
+  </div>
+);
+
+export default App;

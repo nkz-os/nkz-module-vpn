@@ -1,56 +1,103 @@
 """
-NKZ Network Controller — FastAPI application.
+Device Management Backend - FastAPI Application
 
-Responsabilidades:
-    - Gestión del ciclo de vida de dispositivos IoT (claim codes, ZTP)
-    - Integración con Headscale (plano de control SDN)
-    - Firma de certificados X.509 via cert-manager
-    - Endpoints de consulta de peers para el módulo connectivity
-
-Este servicio es el ÚNICO autorizado a llamar a la API de Headscale.
+Zero-touch provisioning of field devices: factory registration, claim by the
+tenant, Headscale pre-auth keys tagged for the field-device ACL, and the SDM
+twin in Orion-LD.
 """
 
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
 
-from app.db.database import init_db
-from app.routes import devices, factory, peers
-from app.middleware.rate_limit import limiter
+import redis.asyncio as redis_async
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api import router as api_router
+from app.api.internal import router as internal_router
+from app.config import Settings, get_settings
+from app.db.session import Database
+from app.deps import Services
+from app.logging_setup import configure_logging
+from app.services.headscale import HeadscaleClient
+from app.services.pki import Pki
+from app.services.ratelimit import ClaimLimiter
+from app.services.twin import TwinWriter
 
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 
-from app.config import settings as _s
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info("Starting NKZ Network Controller...")
-    _ = _s.jwt_issuer_url  # Force early evaluation — fail at startup if JWT issuer is unconfigured
-    await init_db()
-    logger.info("Database tables ready.")
-    yield
-    logger.info("Shutting down NKZ Network Controller.")
+def redis_client_for(settings: Settings) -> redis_async.Redis:
+    """Bounded timeouts: a hung Redis must fail claims closed (503), not hang them."""
+    return redis_async.from_url(settings.redis_url, password=settings.redis_password or None,
+                                socket_timeout=2.0, socket_connect_timeout=2.0)
 
 
-app = FastAPI(
-    title="NKZ Network Controller",
-    description="Device provisioning, SDN management and PKI for Nekazari IoT.",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+async def build_services(settings: Settings) -> tuple[Services, list]:
+    """Create every external client; return them with their close callbacks."""
+    db = await Database.connect(settings.postgres_url)
+    headscale = HeadscaleClient(settings.headscale_api_url, settings.headscale_api_key)
+    redis_client = redis_client_for(settings)
+    services = Services(
+        settings=settings,
+        db=db,
+        headscale=headscale,
+        limiter=ClaimLimiter(redis_client, settings.claim_window_seconds),
+        pki=Pki(settings.k8s_namespace, settings.iot_ca_issuer, settings.device_cert_duration),
+        twin_writer=lambda tenant_id: TwinWriter(tenant_id),
+    )
+    return services, [db.close, headscale.close, redis_client.aclose]
 
-app.include_router(devices.router, prefix="/api/vpn")
-app.include_router(factory.router, prefix="/api/vpn")
-app.include_router(peers.router, prefix="/api/vpn")
+
+def create_app(services: Services | None = None) -> FastAPI:
+    """Application factory. Tests inject `services`; production builds them at startup."""
+    settings = services.settings if services else get_settings()
+    configure_logging(settings.log_level)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        closers: list = []
+        if services is None:
+            settings.validate_required()  # fail fast: refuse to run half-configured
+            app.state.services, closers = await build_services(settings)
+        logger.info("%s v%s starting — prefix=%s", settings.app_name, settings.app_version, settings.api_prefix)
+        try:
+            yield
+        finally:
+            for close in closers:
+                await close()
+            logger.info("%s shutting down", settings.app_name)
+
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        description="Device Management - zero-touch provisioning for the Nekazari Platform",
+        docs_url=f"{settings.api_prefix}/docs",
+        redoc_url=f"{settings.api_prefix}/redoc",
+        openapi_url=f"{settings.api_prefix}/openapi.json",
+        lifespan=lifespan,
+    )
+    if services is not None:
+        app.state.services = services
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type"],
+    )
+
+    @app.get("/health")
+    async def health_check():
+        """Liveness/readiness probe."""
+        return {"status": "healthy", "service": settings.app_name, "version": settings.app_version}
+
+    app.include_router(api_router, prefix=settings.api_prefix)
+    # Internal routes (robotics and other in-cluster callers) — authenticated
+    # by X-Internal-Service-Secret, NOT gateway headers. See app/api/internal.py.
+    app.include_router(internal_router, prefix=settings.api_prefix)
+    return app
 
 
-@app.get("/health")
-@limiter.exempt
-async def health():
-    return {"status": "healthy", "service": "nkz-network-controller", "version": "1.0.0"}
+app = create_app()

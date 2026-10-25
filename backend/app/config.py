@@ -1,77 +1,98 @@
 """
-NKZ Network Controller — Configuration
+Device Management Backend - Configuration
 
-All deployment-specific values (domains, URLs, secrets) must be provided
-via environment variables or Kubernetes Secrets — never hardcoded here.
+Environment-based configuration using pydantic-settings. Every deployment
+value comes from the environment; defaults are empty so nothing here names a
+real installation.
 """
 
-import os
+import json
+from functools import lru_cache
 
-from pydantic_settings import BaseSettings
-from typing import Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "NKZ Network Controller"
+    """Application settings loaded from environment variables."""
 
-    # Base de datos
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@timescaledb:5432/nekazari"
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 
-    # Keycloak — validación JWT (set via env var or K8s ConfigMap)
-    KEYCLOAK_URL: str = "http://keycloak:8080/auth"
-    KEYCLOAK_REALM: str = "nekazari"
-    JWT_ALGORITHM: str = "RS256"
+    # Application
+    app_name: str = "Device Management"
+    app_version: str = "2.0.0"
+    debug: bool = False
+    log_level: str = "INFO"  # level for this module's own loggers; see app.logging_setup
+
+    # API
+    api_prefix: str = "/api/vpn"
+    # Comma-separated (platform ConfigMap) or a JSON list; empty = no CORS headers.
+    cors_origins: str = ""
+
+    # Internal service-to-service auth (/internal/* routes). Compared with
+    # hmac.compare_digest — NOT the api-gateway X-Auth-Signature format.
+    internal_service_secret: str = ""
+
+    # Gateway signature check on user routes. The SDK's require_auth reads
+    # REQUIRE_HMAC_SIGNATURE / HMAC_SECRET itself; these fields only make the
+    # service refuse to start when the check would silently be off.
+    require_hmac_signature: bool = True
+    hmac_secret: str = ""
+
+    # Own database nkz_vpn (devices + audit). No fallback DSN.
+    postgres_url: str = ""
+
+    # Headscale control plane.
+    headscale_api_url: str = ""
+    headscale_public_url: str = ""  # login server the devices use
+    headscale_api_key: str = ""
+
+    # Claim codes: one secret per version, V1 first.
+    factory_secret_v1: str = ""
+    factory_secret_current_version: int = 1
+
+    # Pre-auth keys handed out at claim time.
+    preauth_ttl_minutes: int = 30
+
+    # Claim rate limiting (Redis): rejected codes per device / per organisation.
+    redis_url: str = ""
+    redis_password: str = ""
+    claim_limit_per_device: int = 5
+    claim_limit_per_tenant: int = 5
+    claim_window_seconds: int = 3600
+
+    # Device certificates (cert-manager).
+    k8s_namespace: str = "nekazari"
+    iot_ca_issuer: str = "nekazari-iot-ca"
+    device_cert_duration: str = "8760h"
 
     @property
-    def jwt_issuer_url(self) -> str:
-        """Derive issuer from KEYCLOAK_URL + realm, or from explicit JWT_ISSUER env var."""
-        explicit = os.getenv("JWT_ISSUER", "")
-        if explicit:
-            return explicit
-        if self.KEYCLOAK_URL:
-            return f"{self.KEYCLOAK_URL}/realms/{self.KEYCLOAK_REALM}"
-        raise RuntimeError(
-            "Neither JWT_ISSUER nor KEYCLOAK_URL is configured. "
-            "The service cannot validate tokens without an issuer URL."
-        )
+    def cors_origin_list(self) -> list[str]:
+        raw = self.cors_origins.strip()
+        if not raw:
+            return []
+        if raw.startswith("["):
+            return [str(o).strip() for o in json.loads(raw) if str(o).strip()]
+        return [o.strip() for o in raw.split(",") if o.strip()]
 
-    @property
-    def jwks_url(self) -> str:
-        return f"{self.jwt_issuer_url}/protocol/openid-connect/certs"
-
-    # Headscale — plano de control SDN
-    HEADSCALE_API_URL: str = "http://headscale-service:8080"
-    HEADSCALE_PUBLIC_URL: str = ""   # URL externa que los dispositivos usan: https://vpn.DOMAIN — must be set via env
-    HEADSCALE_API_KEY: str  # Requerido. Desde Secret 'nkz-network-controller-secret'
-
-    # Factory Secret para HMAC claim codes (versionado)
-    FACTORY_SECRET_V1: str  # Requerido. Desde Secret 'nkz-network-controller-secret'
-    FACTORY_SECRET_CURRENT_VERSION: int = 1
-
-    # Redis — rate limiting en endpoint /claim
-    REDIS_URL: str = "redis://redis-service:6379/0"
-    REDIS_PASSWORD: str = ""  # From redis-secret — Redis requires auth
-    CLAIM_RATE_LIMIT_ATTEMPTS: int = 5
-    CLAIM_RATE_LIMIT_WINDOW_SECONDS: int = 3600
-
-    # cert-manager — namespace y ClusterIssuer
-    K8S_NAMESPACE: str = "nekazari"
-    IOT_CA_ISSUER: str = "nekazari-iot-ca"
-    DEVICE_CERT_DURATION: str = "8760h"
-
-    # CORS — set via CORS_ORIGINS env var (comma-separated or JSON list)
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
-
-    # Entity Manager — para crear entidades NGSI-LD al activar dispositivos
-    ENTITY_MANAGER_URL: str = "http://entity-manager-service:5000"
-
-    # NGSI-LD @context URL — required for FIWARE compliance
-    CONTEXT_URL: str = "http://api-gateway-service:5000/ngsi-ld-context.json"
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    def validate_required(self) -> None:
+        """Fail at startup, naming every missing value at once."""
+        required = {
+            "POSTGRES_URL": self.postgres_url,
+            "HEADSCALE_API_URL": self.headscale_api_url,
+            "HEADSCALE_API_KEY": self.headscale_api_key,
+            "HEADSCALE_PUBLIC_URL": self.headscale_public_url,
+            "FACTORY_SECRET_V1": self.factory_secret_v1,
+            "REDIS_URL": self.redis_url,
+            "INTERNAL_SERVICE_SECRET": self.internal_service_secret,
+        }
+        if self.require_hmac_signature:
+            required["HMAC_SECRET"] = self.hmac_secret
+        missing = [name for name, value in required.items() if not value]
+        if missing:
+            raise RuntimeError("Missing required configuration: " + ", ".join(missing))
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()

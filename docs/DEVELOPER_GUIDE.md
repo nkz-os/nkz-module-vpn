@@ -1,81 +1,83 @@
 ---
-title: Nekazari Zero-Touch Provisioning (VPN) — Developer Guide
-description: How hardware manufacturers, integrators, and robotics developers configure field devices to securely connect to Nekazari Cloud Platform via Headscale SDN
+title: Zero-Touch Provisioning (VPN) — Developer Guide
+description: How manufacturers and integrators prepare field devices to join the Nekazari platform through its self-hosted Headscale tailnet
 ---
-# Nekazari Zero-Touch Provisioning (VPN) — Developer Guide
+# Zero-Touch Provisioning (VPN) — Developer Guide
 
-This document explains how hardware manufacturers, integrators, and robotics developers must configure their field devices (robots, tractors, gateways) to securely connect to the Nekazari Cloud Platform using our Software-Defined Network (SDN).
+For hardware manufacturers, integrators and robotics developers who build devices that
+connect to a Nekazari platform installation.
 
-## 1. Architecture Overview (Headscale / Tailscale)
+## 1. What the device gets
 
-Nekazari uses **Headscale** (an open-source, self-hosted Tailscale control server) to provide a Zero-Trust mesh network. This allows your device to securely connect to the central ROS2/Zenoh broker and MQTT services without opening firewall ports, port-forwarding, or dealing with complex static IPs.
+A robot or gateway joins the platform's tailnet (WireGuard, coordinated by Headscale) and can
+then reach, through the cluster's subnet router:
 
-### Important Notice on Legacy MQTT Devices
-> **Will my existing MQTT devices stop working?**
-> **No.** If you have simple IoT sensors or gateways currently connecting to our public MQTT broker using standard TLS/SSL and username/password credentials, **they will continue to function normally**. The VPN is an *optional* (but highly recommended for robotics and ROS/Zenoh telemetry) layer that runs in parallel.
+- the **Zenoh router** on TCP 7447 (robot ↔ platform link), and
+- the **MQTT broker** on TCP 1883 (management and slow telemetry).
 
-## 2. Device Requirements
+Nothing else: devices cannot reach each other or any other cluster service. The address of
+each service is handed out by the module that owns it (for example the robotics module
+returns its Zenoh endpoint when a robot is enrolled).
 
-Your device must run an operating system capable of running the standard **Tailscale client** (`tailscaled`).
-- **Supported OS:** Linux (Ubuntu, Debian, Yocto, Raspberry Pi OS, Alpine), Windows, macOS, Android, iOS.
-- **Network:** Outbound internet access (port 443 TCP for control plane, port 41641/3478 UDP for STUN/TURN/DERP relays, and 51820 UDP for direct peer-to-peer). **No inbound ports need to be opened.**
+Sensors that cannot run a VPN client connect to the MQTT broker over TLS with the client
+certificate issued at the factory instead.
 
-## 3. How to install the Client
+## 2. Device requirements
 
-Install the official Tailscale client on your Linux-based robot or gateway:
+- An OS that runs the standard Tailscale client (`tailscaled`): Linux (Debian/Ubuntu,
+  Raspberry Pi OS, Yocto, Alpine), and others.
+- Outbound internet access on TCP 443. No inbound ports.
 
 ```bash
-# For Ubuntu / Debian / ROS environments
 curl -fsSL https://tailscale.com/install.sh | sh
 ```
 
-For other operating systems or manual installation, refer to the [official Tailscale installation guide](https://tailscale.com/download).
+## 3. Factory
 
-## 4. The Zero-Touch Provisioning (ZTP) Flow
-
-We use a "Claim Code" approach. You do **not** configure usernames, passwords, or static IPs on the robot.
-
-### Step 1: Generate a Claim Code in the Factory
-During your device's manufacturing or flashing process, you must generate or obtain a unique **Claim Code** (e.g., `NKZ-1234-ABCD`). 
-*(Note: A dedicated flashing tool `factory-tool/flash_tool.py` is provided in our repository for bulk generation of HMAC-signed codes).*
-
-### Step 2: The Device connects to Nekazari
-On the robot's first boot in the field, run the following command to point the Tailscale client to the Nekazari Headscale server instead of the public Tailscale servers.
+A platform operator (PlatformAdmin) provisions each unit with `factory-tool/flash_tool.py`:
 
 ```bash
-# Replace 'https://vpn.YOUR_DOMAIN' with the actual production URL of the Nekazari SDN
-sudo tailscale up --login-server=https://vpn.YOUR_DOMAIN
+python factory-tool/flash_tool.py provision \
+  --uuid <DEVICE_UUID> --type rover|gateway|sensor --tenant <ORGANISATION_ID> \
+  --api-url https://<platform-api> --token <PLATFORM_ADMIN_ACCESS_TOKEN> \
+  --out-dir ./output/<DEVICE_UUID>/
 ```
 
-### Step 3: Registration
-When you run the command above, Tailscale will output an authentication URL in the terminal, looking something like this:
-```text
-To authenticate, visit:
-https://vpn.YOUR_DOMAIN/register/nodekey:xyz123...
-```
+It registers the device for the organisation it is built for, generates the key pair and CSR
+locally, has the certificate signed, and writes `device.key` (mode 0600), `device.crt`,
+`ca.crt`, `claim_code.txt` and `nkz-device.json`. Print the claim code on the chassis; flash
+the key and certificate, then destroy the local copy of the key.
 
-**Do NOT visit this URL.**
-Instead, the end-user (the farmer or operator) will log into the Nekazari Web Platform, navigate to the **Devices** module, and enter the **Claim Code** printed on the robot's physical sticker.
+The claim code is bound to the device UUID. It is the only thing the organisation needs to
+activate the device. The tool writes `claim_code.txt` as soon as the device is registered; if
+a later step fails, running it again for the same device returns the same code.
 
-Behind the scenes, Nekazari will match the Claim Code to the Tenant, automatically approve the `nodekey` in Headscale, and generate the Digital Twin (`AgriculturalMachine`) in the FIWARE Context Broker.
+## 4. Activation in the field
 
-### Step 4: Verification
-Once the user claims the device in the web UI, the `tailscale up` command on the robot will complete successfully.
-The robot is now part of the mesh network and has been assigned an internal IP address (e.g., `100.64.0.5`).
+1. The organisation's administrator opens **Devices → Add device** and enters the UUID and
+   claim code.
+2. For robots and gateways the page shows a single-use key (valid for 30 minutes, shown
+   once) and the exact command to run on the device:
 
-You can verify the connection status on the device:
+   ```bash
+   sudo tailscale up --login-server=<login server> --authkey=<key> \
+     --hostname=<DEVICE_UUID> --accept-routes
+   ```
+
+   `--accept-routes` is required: without it the Linux client ignores the cluster route
+   announced by the subnet router. `--hostname` must be the device UUID — the platform uses it
+   to recognise the node.
+3. The device appears **online** in the Devices page with its tailnet address.
+
+Verify on the device:
+
 ```bash
-tailscale status
+tailscale status          # the subnet router is listed as a peer
+ip route get <zenoh-ip>   # goes through tailscale0
 ```
 
-## 5. Network Access (Zero-Trust Policies)
+## 5. Revocation
 
-Once connected, your device is placed in a strictly isolated Tenant environment. 
-
-By default, Nekazari's network policies (`acls.hujson`) only allow outbound traffic from your device to the central cluster infrastructure on specific ports:
-- **Zenoh Router:** `100.64.0.1:7447` (Telemetry, ROS2 bridge)
-- **MQTT Broker:** `100.64.0.1:1883` (Management, slow data)
-
-*Note: The exact IP `100.64.0.1` is an example of the central cluster's router IP. Check the platform documentation for the exact endpoints assigned to your Tenant.*
-
-Your device **cannot** ping or access other devices in the network, not even devices belonging to the same Tenant, unless explicitly authorized via a custom ACL policy requested by the Tenant Administrator.
+Revoking a device in the page removes its node from the tailnet immediately, expires its VPN
+key if it was never used, and marks it as revoked; the claim code can no longer be used. A
+revoked unit needs a new registration with a new UUID.

@@ -1,38 +1,36 @@
+# Dependencies
 node_modules/
+package-lock.json
+
+# Build output
 dist/
+build/
+
+# Environment
 .env
-.env.*
-!.env.example
-__pycache__/
-*.py[cod]
-.venv/
-*.log
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
-.worktrees/
-frontend/dist/
+Thumbs.db
 
-# AI and Agent communications
-.ai/
-*plan*.md
-*spec*.md
-*skill*.md
-*handover*.md
-*agent*.md
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Internal Docs
-internal-docs/
-internal-docs-local/
-documents/
-docs/superpowers/
-docs/internal/
-docs/plans/
-docs/specs/
-docs/audits/
-*_PLAN.md
-*_SPEC.md
-*HANDOVER*.md
-HANDOFF.md
-CURRENT_STATE.md
+# TypeScript
+*.tsbuildinfo
+
 
 # Security: sensitive files
 *.pem
@@ -40,3 +38,7 @@ CURRENT_STATE.md
 apikey_*.txt
 *.apikey
 *-secret*
+
+# Python
+__pycache__/
+*.pyc

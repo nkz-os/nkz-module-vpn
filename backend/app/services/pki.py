@@ -1,150 +1,129 @@
 """
-Servicio PKI: firma CSRs de dispositivos via cert-manager (CertificateRequest).
+Device certificates signed by the IoT CA through cert-manager.
 
-El factory tool genera el par de claves y el CSR localmente (en la estación
-de fábrica). Este servicio recibe el CSR, crea un CertificateRequest en K8s,
-cert-manager lo firma con la CA IoT y devuelve el certificado X.509 en PEM.
-
-El certificado firmado se incrusta en el dispositivo antes de salir de fábrica.
+The factory tool generates the key pair and CSR on the flashing station; this
+service checks that the CSR names the registered device (CN = device UUID,
+OU = device type — the CN becomes the MQTT username on the mTLS listener),
+creates a CertificateRequest against the IoT ClusterIssuer and returns the
+signed certificate together with the CA certificate cert-manager reports in
+the request status (CA issuer), so no Secret has to be read.
 """
 
 import asyncio
 import base64
 import logging
-from datetime import datetime
+import time
+from dataclasses import dataclass
 
-from kubernetes import client as k8s_client, config as k8s_config
-from kubernetes.client.rest import ApiException
-
-from app.config import settings
+from cryptography import x509
+from cryptography.x509.oid import NameOID
 
 logger = logging.getLogger(__name__)
 
-# Tiempo máximo de espera para que cert-manager firme el certificado
 _SIGN_TIMEOUT_SECONDS = 30
-_SIGN_POLL_INTERVAL = 1.0
+_POLL_INTERVAL_SECONDS = 1.0
+_GROUP, _VERSION, _PLURAL = "cert-manager.io", "v1", "certificaterequests"
 
 
-def _load_k8s_config() -> None:
-    """Carga la config de K8s (in-cluster cuando corre en K8s, local para tests)."""
+@dataclass(frozen=True)
+class SignedCertificate:
+    certificate_pem: str
+    ca_pem: str
+
+
+class PkiError(Exception):
+    pass
+
+
+def _attr(name: x509.Name, oid) -> str | None:
+    values = name.get_attributes_for_oid(oid)
+    return str(values[0].value) if values else None
+
+
+def validate_csr(csr_pem: str, device_uuid: str, device_type: str) -> None:
+    """Raise ValueError unless the CSR is well signed and names this device."""
     try:
-        k8s_config.load_incluster_config()
-    except k8s_config.ConfigException:
-        k8s_config.load_kube_config()
+        csr = x509.load_pem_x509_csr(csr_pem.encode("utf-8"))
+    except Exception:
+        raise ValueError("CSR is not valid PEM") from None
+    if not csr.is_signature_valid:
+        raise ValueError("CSR signature is invalid")
+    if _attr(csr.subject, NameOID.COMMON_NAME) != device_uuid:
+        raise ValueError("CSR common name must be the device UUID")
+    if _attr(csr.subject, NameOID.ORGANIZATIONAL_UNIT_NAME) != device_type:
+        raise ValueError("CSR organizational unit must be the device type")
 
 
-async def sign_csr(csr_pem: str, device_uuid: str, device_type: str) -> str:
-    """
-    Firma un CSR con la CA IoT de Nekazari.
+def fingerprint_sha256(certificate_pem: str) -> str:
+    from cryptography.hazmat.primitives import hashes
 
-    Args:
-        csr_pem: CSR en formato PEM (generado por el factory tool).
-        device_uuid: UUID del dispositivo (para nombrar el CertificateRequest).
-        device_type: rover | gateway | sensor_esp32.
+    cert = x509.load_pem_x509_certificate(certificate_pem.encode("utf-8"))
+    return cert.fingerprint(hashes.SHA256()).hex()
 
-    Returns:
-        Certificado X.509 firmado en formato PEM.
 
-    Raises:
-        TimeoutError: si cert-manager no firma en _SIGN_TIMEOUT_SECONDS.
-        RuntimeError: si cert-manager rechaza el CSR.
-    """
-    _load_k8s_config()
-    custom_api = k8s_client.CustomObjectsApi()
+class Pki:
+    def __init__(self, namespace: str, issuer: str, duration: str):
+        self._namespace = namespace
+        self._issuer = issuer
+        self._duration = duration
+        self._api = None
 
-    # Nombre único y legible para el CertificateRequest
-    cr_name = f"device-{device_uuid[:12]}-{int(datetime.utcnow().timestamp())}"
+    def _custom_api(self):
+        if self._api is None:
+            from kubernetes import client, config
 
-    cr_body = {
-        "apiVersion": "cert-manager.io/v1",
-        "kind": "CertificateRequest",
-        "metadata": {
-            "name": cr_name,
-            "namespace": settings.K8S_NAMESPACE,
-            "labels": {
-                "app": "nkz-network-controller",
-                "device-uuid": device_uuid,
-                "device-type": device_type,
+            try:
+                config.load_incluster_config()
+            except config.ConfigException:
+                config.load_kube_config()
+            self._api = client.CustomObjectsApi()
+        return self._api
+
+    async def sign_csr(self, csr_pem: str, device_uuid: str, device_type: str) -> SignedCertificate:
+        return await asyncio.to_thread(self._sign_blocking, csr_pem, device_uuid, device_type)
+
+    def _sign_blocking(self, csr_pem: str, device_uuid: str, device_type: str) -> SignedCertificate:
+        from kubernetes.client.rest import ApiException
+
+        api = self._custom_api()
+        name = f"device-{device_uuid[:12]}-{int(time.time())}"
+        body = {
+            "apiVersion": f"{_GROUP}/{_VERSION}",
+            "kind": "CertificateRequest",
+            "metadata": {"name": name, "namespace": self._namespace,
+                         "labels": {"app": "vpn-backend", "device-type": device_type}},
+            "spec": {
+                "request": base64.b64encode(csr_pem.encode("utf-8")).decode("ascii"),
+                "issuerRef": {"name": self._issuer, "kind": "ClusterIssuer", "group": _GROUP},
+                "duration": self._duration,
+                "isCA": False,
+                "usages": ["client auth", "digital signature", "key encipherment"],
             },
-        },
-        "spec": {
-            "request": base64.b64encode(csr_pem.encode()).decode(),
-            "issuerRef": {
-                "name": settings.IOT_CA_ISSUER,
-                "kind": "ClusterIssuer",
-            },
-            "duration": settings.DEVICE_CERT_DURATION,
-            "isCA": False,
-            "usages": ["client auth", "digital signature", "key encipherment"],
-        },
-    }
-
-    try:
-        custom_api.create_namespaced_custom_object(
-            group="cert-manager.io",
-            version="v1",
-            namespace=settings.K8S_NAMESPACE,
-            plural="certificaterequests",
-            body=cr_body,
-        )
-        logger.info(f"CertificateRequest {cr_name} created for device {device_uuid}")
-    except ApiException as e:
-        raise RuntimeError(f"Failed to create CertificateRequest: {e}") from e
-
-    # Esperar a que cert-manager firme el certificado (polling)
-    cert_pem = await _wait_for_certificate(custom_api, cr_name)
-
-    # Limpiar el CertificateRequest (ya no es necesario)
-    try:
-        custom_api.delete_namespaced_custom_object(
-            group="cert-manager.io",
-            version="v1",
-            namespace=settings.K8S_NAMESPACE,
-            plural="certificaterequests",
-            name=cr_name,
-        )
-    except ApiException:
-        pass  # La limpieza falla silenciosamente — no es crítico
-
-    return cert_pem
-
-
-async def _wait_for_certificate(
-    custom_api: k8s_client.CustomObjectsApi, cr_name: str
-) -> str:
-    """Polling hasta que cert-manager firme el certificado o se agote el timeout."""
-    elapsed = 0.0
-    while elapsed < _SIGN_TIMEOUT_SECONDS:
-        await asyncio.sleep(_SIGN_POLL_INTERVAL)
-        elapsed += _SIGN_POLL_INTERVAL
-
+        }
         try:
-            cr = custom_api.get_namespaced_custom_object(
-                group="cert-manager.io",
-                version="v1",
-                namespace=settings.K8S_NAMESPACE,
-                plural="certificaterequests",
-                name=cr_name,
-            )
-        except ApiException:
-            continue
-
-        status = cr.get("status", {})
-        conditions = status.get("conditions", [])
-
-        # Comprobar si cert-manager rechazó el CSR
-        for cond in conditions:
-            if cond.get("type") == "Denied" and cond.get("status") == "True":
-                raise RuntimeError(
-                    f"CertificateRequest {cr_name} was denied: {cond.get('message')}"
-                )
-
-        # Comprobar si el certificado ya está firmado
-        cert_b64 = status.get("certificate")
-        if cert_b64:
-            return base64.b64decode(cert_b64).decode("utf-8")
-
-    raise TimeoutError(
-        f"cert-manager did not sign CertificateRequest {cr_name} "
-        f"within {_SIGN_TIMEOUT_SECONDS}s"
-    )
+            api.create_namespaced_custom_object(_GROUP, _VERSION, self._namespace, _PLURAL, body)
+        except ApiException as exc:
+            raise PkiError(f"CertificateRequest create failed: HTTP {exc.status}") from None
+        try:
+            deadline = time.monotonic() + _SIGN_TIMEOUT_SECONDS
+            while time.monotonic() < deadline:
+                time.sleep(_POLL_INTERVAL_SECONDS)
+                try:
+                    cr = api.get_namespaced_custom_object(_GROUP, _VERSION, self._namespace, _PLURAL, name)
+                except ApiException:
+                    continue
+                status = cr.get("status") or {}
+                for cond in status.get("conditions") or []:
+                    if cond.get("type") in ("Denied", "InvalidRequest") and cond.get("status") == "True":
+                        raise PkiError(f"CertificateRequest {cond.get('type').lower()}: {cond.get('reason')}")
+                if status.get("certificate"):
+                    return SignedCertificate(
+                        certificate_pem=base64.b64decode(status["certificate"]).decode("utf-8"),
+                        ca_pem=base64.b64decode(status.get("ca") or b"").decode("utf-8"),
+                    )
+            raise PkiError(f"CertificateRequest not signed within {_SIGN_TIMEOUT_SECONDS}s")
+        finally:
+            try:
+                api.delete_namespaced_custom_object(_GROUP, _VERSION, self._namespace, _PLURAL, name)
+            except ApiException as exc:
+                logger.warning("CertificateRequest %s cleanup failed: HTTP %s", name, exc.status)

@@ -1,53 +1,47 @@
-"""
-Modelos SQLAlchemy para el Network Controller.
-"""
+"""Domain records of the device registry (immutable)."""
 
-import uuid as _uuid
-from sqlalchemy import Column, String, Integer, Text, TIMESTAMP, func
-from sqlalchemy.orm import DeclarativeBase
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Literal
 
+DeviceType = Literal["rover", "gateway", "sensor"]
+DeviceState = Literal["PENDING", "CLAIMED", "REVOKED"]
 
-class Base(DeclarativeBase):
-    pass
-
-
-class ProvisionedDevice(Base):
-    """Registro de cada dispositivo IoT provisionado en la plataforma."""
-
-    __tablename__ = "provisioned_devices"
-
-    uuid = Column(String, primary_key=True)
-    tenant_id = Column(String, nullable=False, index=True)
-    device_type = Column(String, nullable=False)
-    device_name = Column(String, nullable=True)
-    claim_code_hash = Column(String, nullable=False)
-    claim_version = Column(Integer, nullable=False)
-    state = Column(String, nullable=False, default="PENDING")
-    headscale_peer_id = Column(String, nullable=True)
-    cert_fingerprint = Column(String, nullable=True)
-    ngsi_entity_id = Column(String, nullable=True)
-    provisioned_at = Column(TIMESTAMP(timezone=True), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+DEVICE_TYPES: tuple[str, ...] = ("rover", "gateway", "sensor")
 
 
-# Canonical mapping: device_type → FIWARE Smart Data Model type
-DEVICE_TYPE_TO_NGSI_TYPE: dict[str, str] = {
-    "rover": "AgriRobot",
-    "gateway": "AgriGateway",
-    "sensor_esp32": "AgriSensor",
-}
+@dataclass(frozen=True)
+class Device:
+    device_uuid: str
+    tenant_id: str
+    device_type: str
+    display_name: str | None
+    claim_version: int
+    state: str
+    claimed_at: datetime | None
+    claimed_by: str | None
+    revoked_at: datetime | None
+    revoked_by: str | None
+    headscale_user: str | None
+    preauth_key_id: str | None
+    preauth_expires: datetime | None
+    node_id: str | None
+    node_hostname: str | None
+    node_ip: str | None
+    ngsi_entity_id: str | None
+    ngsi_entity_type: str | None
+    cert_fingerprint: str | None
+    created_at: datetime
+    updated_at: datetime
 
 
-class DeviceAuditLog(Base):
-    """Immutable audit trail for device lifecycle events."""
-
-    __tablename__ = "device_audit_log"
-
-    id = Column(String, primary_key=True, default=lambda: str(_uuid.uuid4()))
-    tenant_id = Column(String, nullable=False, index=True)
-    device_uuid = Column(String, nullable=False, index=True)
-    action = Column(String, nullable=False)
-    actor_sub = Column(String, nullable=False)
-    ip_address = Column(String, nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+@dataclass(frozen=True)
+class DeviceEvent:
+    id: int
+    device_uuid: str
+    tenant_id: str
+    action: str
+    actor_sub: str
+    ip: str | None
+    details: dict[str, Any] | None
+    created_at: datetime

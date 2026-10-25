@@ -1,133 +1,92 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Wifi, Plus, RefreshCw } from 'lucide-react';
-import { useTranslation } from '@nekazari/sdk';
-import { vpnApi } from '../services/api';
-import { DeviceList } from '../components/DeviceList';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from '@nekazari/sdk';
+import { Button, Card, Inline, Stack, Switch } from '@nekazari/ui-kit';
+import { Factory, Network, Plus, RefreshCw } from 'lucide-react';
+import { useDevices } from '../hooks/useDevices';
+import type { DeviceOut } from '../types/vpn';
 import { AddDeviceWizard } from '../components/AddDeviceWizard';
+import { DeviceList } from '../components/DeviceList';
 import { FactoryPanel } from '../components/FactoryPanel';
+import { RevokeConfirm } from '../components/RevokeConfirm';
 
-/**
- * Main page for the VPN / Device Management module.
- * Registered as the `main` component for the `vpn` module.
- * Rendered by the host when the user navigates to /devices.
- */
+const STEPS = ['step1', 'step2', 'step3', 'step4', 'step5'] as const;
+
 export const DevicesPage: React.FC = () => {
   const { t } = useTranslation('vpn');
-  const [showWizard, setShowWizard] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [quota, setQuota] = useState<{ used: number; max: number } | null>(null);
-  const isPlatformAdmin = (window as any).__nekazariAuthContext?.roles?.includes('PlatformAdmin') ?? false;
+  const auth = useAuth();
+  const isPlatformAdmin = auth.hasRole('PlatformAdmin');
   const [allTenants, setAllTenants] = useState(false);
-
-  const handleSuccess = useCallback(() => {
-    setRefreshTrigger(t => t + 1);
-  }, []);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshTrigger(t => t + 1);
-  }, []);
-
-  useEffect(() => {
-    vpnApi.listDevices().then(d => {
-      setQuota({ used: d.total, max: d.max_devices || 50 });
-    }).catch(() => {
-      setQuota(null);
-    });
-  }, [refreshTrigger]);
+  const [showWizard, setShowWizard] = useState(false);
+  const [showFactory, setShowFactory] = useState(false);
+  const [revoking, setRevoking] = useState<DeviceOut | null>(null);
+  const { devices, loading, error, refresh } = useDevices(isPlatformAdmin && allTenants);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Page header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center">
-              <Wifi className="w-5 h-5 text-sky-600" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{t('page.title')}</h1>
-              <p className="text-sm text-gray-500">{t('page.subtitle')}</p>
-            </div>
-          </div>
-
+    <Stack gap="section">
+      <Inline justify="between" align="center" wrap>
+        <Inline gap="stack" align="center">
+          <Network size={24} />
+          <Stack gap="tight">
+            <span className="text-nkz-xl font-semibold text-nkz-text-primary">{t('page.title')}</span>
+            <span className="text-nkz-sm text-nkz-text-secondary">{t('page.subtitle')}</span>
+          </Stack>
+        </Inline>
+        <Inline gap="inline" align="center" wrap>
           {isPlatformAdmin && (
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-0.5">
-              <button onClick={() => setAllTenants(false)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${!allTenants ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {t('list.myTenant')}
-              </button>
-              <button onClick={() => setAllTenants(true)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${allTenants ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {t('list.allTenants')}
-              </button>
-            </div>
+            <Switch checked={allTenants} onChange={setAllTenants} label={t('page.allTenants')} />
           )}
+          <Button variant="ghost" onClick={refresh} leadingIcon={<RefreshCw size={16} />} aria-label={t('page.refresh')}>
+            {t('page.refresh')}
+          </Button>
+          {isPlatformAdmin && (
+            <Button variant="secondary" onClick={() => setShowFactory((v) => !v)} leadingIcon={<Factory size={16} />}>
+              {t('factory.open')}
+            </Button>
+          )}
+          <Button onClick={() => setShowWizard(true)} leadingIcon={<Plus size={16} />}>
+            {t('page.addDevice')}
+          </Button>
+        </Inline>
+      </Inline>
 
-          <div className="flex items-center gap-3">
-            {quota && (
-              <span className={`
-                text-xs font-medium px-2.5 py-1 rounded-full
-                ${quota.used >= quota.max
-                  ? 'bg-red-100 text-red-700'
-                  : quota.used >= quota.max * 0.8
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-gray-100 text-gray-600'
-                }
-              `}>
-                {t('page.quotaBadge', { used: quota.used, max: quota.max })}
-              </span>
-            )}
-            <button
-              onClick={handleRefresh}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title={t('page.refreshTitle')}
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setShowWizard(true)}
-              disabled={!quota || quota.used >= quota.max}
-              className="flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              title={quota && quota.used >= quota.max ? t('page.quotaFull', { used: quota.used, max: quota.max }) : undefined}
-            >
-              <Plus className="w-4 h-4" />
-              {t('page.addDevice')}
-            </button>
-          </div>
-        </div>
-
-        {/* How it works — shown only to admin audience */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-sm font-semibold text-gray-700 mb-2">{t('page.howItWorks')}</h2>
-          <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-            <li>{t('page.step1')}</li>
-            <li>{t('page.step2')}</li>
-            <li>{t('page.step3')}</li>
-            <li>{t('page.step4')}</li>
-            <li>{t('page.step5')}</li>
-          </ol>
-        </div>
-
-        {/* Factory panel — PlatformAdmin only */}
-        {isPlatformAdmin && (
-          <FactoryPanel onSuccess={handleSuccess} />
-        )}
-
-        {/* Device table */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">{t('page.provisionedDevices')}</h2>
-          <DeviceList refreshTrigger={refreshTrigger} allTenants={allTenants} isPlatformAdmin={isPlatformAdmin} />
-        </div>
-      </div>
-
-      {showWizard && (
-        <AddDeviceWizard
-          onClose={() => setShowWizard(false)}
-          onSuccess={handleSuccess}
+      {showWizard && <AddDeviceWizard onClose={() => setShowWizard(false)} onActivated={refresh} />}
+      {showFactory && isPlatformAdmin && <FactoryPanel onRegistered={refresh} />}
+      {revoking && (
+        <RevokeConfirm
+          device={revoking}
+          onCancel={() => setRevoking(null)}
+          onRevoked={() => {
+            setRevoking(null);
+            refresh();
+          }}
         />
       )}
-    </div>
+
+      <Card padding="md">
+        <Stack gap="inline">
+          <span className="text-nkz-sm font-semibold text-nkz-text-primary">{t('page.howItWorks')}</span>
+          <ol className="list-decimal pl-5 text-nkz-sm text-nkz-text-secondary">
+            {STEPS.map((step) => (
+              <li key={step}>{t(`page.${step}`)}</li>
+            ))}
+          </ol>
+        </Stack>
+      </Card>
+
+      <Stack gap="inline">
+        <span className="text-nkz-sm font-semibold text-nkz-text-primary">
+          {t('page.devices')} · {t('page.count', { count: devices.length })}
+        </span>
+        <DeviceList
+          devices={devices}
+          loading={loading}
+          error={error}
+          showTenant={isPlatformAdmin && allTenants}
+          onRetry={refresh}
+          onRevoke={setRevoking}
+        />
+      </Stack>
+    </Stack>
   );
 };
-
-export default DevicesPage;

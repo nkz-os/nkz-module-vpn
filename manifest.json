@@ -1,0 +1,49 @@
+{
+  "id": "vpn",
+  "name": "vpn",
+  "display_name": "Device Management",
+  "version": "2.0.0",
+  "description": "Zero-touch provisioning of field devices: register at the factory, claim with the code on the chassis, and join the platform VPN.",
+  "description_i18n": {
+    "es": "Aprovisionamiento sin intervención de dispositivos de campo: alta en fábrica, reclamo con el código del chasis y conexión a la VPN de la plataforma.",
+    "en": "Zero-touch provisioning of field devices: register at the factory, claim with the code on the chassis, and join the platform VPN.",
+    "eu": "Landa-gailuen esku-hartzerik gabeko hornikuntza: fabrikan erregistratu, txasiseko kodearekin erreklamatu eta plataformaren VPNra konektatu.",
+    "fr": "Provisionnement sans intervention des équipements de terrain : enregistrement en usine, réclamation avec le code du châssis et connexion au VPN de la plateforme.",
+    "pt": "Aprovisionamento sem intervenção de dispositivos de campo: registo na fábrica, reclamação com o código do chassis e ligação à VPN da plataforma.",
+    "ca": "Aprovisionament sense intervenció de dispositius de camp: alta a fàbrica, reclamació amb el codi del xassís i connexió a la VPN de la plataforma."
+  },
+  "short_description": "Field devices on the platform VPN",
+  "icon": "network",
+  "author": { "name": "Robotika Engineering", "email": "", "organization": "nkz-os" },
+  "category": "connectivity",
+  "module_type": "ADDON_CORE",
+  "required_plan_type": "free",
+  "pricing_tier": "FREE",
+  "route_path": "/devices",
+  "label": "Devices",
+  "required_roles": ["TenantAdmin", "PlatformAdmin"],
+  "dependencies": {
+    "sdk_version": "^1.2.0",
+    "react_version": "^18.3.1",
+    "platform_version": "^2.0.0"
+  },
+  "permissions": {
+    "api_access": ["/api/vpn/*"],
+    "storage_access": false,
+    "external_requests": []
+  },
+  "build_config": {
+    "type": "module-federation",
+    "remote_entry_url": "/modules/vpn/mf-manifest.json"
+  },
+  "slots": {
+    "context-panel": ["DeviceContextPanel"],
+    "dashboard-widget": ["DeviceStatusWidget"]
+  },
+  "metadata": {
+    "icon": "network",
+    "color": "#3B82F6",
+    "features": ["Factory registration", "Claim codes", "Tagged VPN access", "SDM twin"],
+    "screenshots": []
+  }
+}
