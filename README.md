@@ -38,10 +38,12 @@ robotics ───── X-Internal-Service-Secret ──► /api/vpn/internal/*
   terms only (`name`, `serialNumber`, `deviceState`, and `category: robot` for robots). No
   provisioning data reaches the broker.
 - **State machine:** `PENDING → CLAIMED → REVOKED` (or `PENDING → REVOKED`). Revoking removes
-  the device's node from Headscale first; if that fails nothing changes.
+  the device's node from Headscale and expires its key if still unused; if Headscale cannot be
+  reached nothing changes. Sensors get no VPN key (they use MQTT over mTLS).
 - **Auth:** user routes require the gateway's `X-Auth-Signature`; internal routes require
-  `X-Internal-Service-Secret`. The claim endpoint is rate limited (per device, organisation
-  and client IP) and refuses claims if the limiter is unavailable.
+  `X-Internal-Service-Secret`. Wrong claim codes are rate limited per device and per
+  organisation (successful activations never count), and claims are refused if the limiter
+  is unavailable.
 
 ## API (`/api/vpn`)
 

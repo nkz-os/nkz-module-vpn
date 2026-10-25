@@ -52,7 +52,7 @@ class ClaimOut(BaseModel):
     display_name: str | None
     state: str
     ngsi_entity_id: str
-    network: NetworkOut
+    network: NetworkOut | None  # robots and gateways only; the key is shown once
 
 
 class NodeOut(BaseModel):
@@ -115,7 +115,8 @@ async def claim_device(body: ClaimIn, request: Request, auth: AuthContext = Depe
         device_uuid=device.device_uuid, device_type=device.device_type, display_name=device.display_name,
         state=device.state, ngsi_entity_id=device.ngsi_entity_id,
         network=NetworkOut(login_server=svc.settings.headscale_public_url, preauth_key=result.preauth.key,
-                           expires_at=result.preauth.expires_at, hostname=device.device_uuid),
+                           expires_at=result.preauth.expires_at, hostname=device.device_uuid)
+        if result.preauth else None,
     )
 
 

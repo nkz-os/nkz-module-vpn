@@ -9,7 +9,7 @@ import logging
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
 from app.db.repo import DeviceExists, DeviceRepo
@@ -53,6 +53,7 @@ class SignCsrOut(BaseModel):
 async def register_device(
     body: RegisterDeviceIn,
     request: Request,
+    response: Response,
     auth: AuthContext = Depends(require_roles("PlatformAdmin")),
     svc: Services = Depends(get_services),
 ):
@@ -66,6 +67,19 @@ async def register_device(
     claim_code = generate_claim_code(device_uuid, secret, version)
     async with svc.db.platform_tx() as conn:
         repo = DeviceRepo(conn)
+        existing = await repo.get(device_uuid)
+        if existing is not None:
+            # Same device again (e.g. the station lost the code when signing failed):
+            # the code is deterministic, so hand it back. Anything else is a conflict.
+            same = (existing.state == "PENDING" and existing.tenant_id == body.tenant_id
+                    and existing.device_type == body.device_type)
+            if not same:
+                raise HTTPException(status.HTTP_409_CONFLICT, "Device already registered")
+            again = factory_secret_for(svc.settings, existing.claim_version)
+            response.status_code = status.HTTP_200_OK
+            return RegisterDeviceOut(device_uuid=device_uuid, device_type=existing.device_type,
+                                     tenant_id=existing.tenant_id,
+                                     claim_code=generate_claim_code(device_uuid, again, existing.claim_version))
         try:
             await repo.create_pending(device_uuid, body.tenant_id, body.device_type, body.display_name, version)
         except DeviceExists:

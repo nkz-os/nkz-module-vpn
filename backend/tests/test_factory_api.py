@@ -48,9 +48,18 @@ async def test_register_returns_claim_code_and_persists(api, db):
     assert events[0].actor_sub == "u1"
 
 
-async def test_register_duplicate_409(api):
+async def test_register_again_same_device_returns_same_code(api):
+    first = await api.post(REGISTER, json=body(), headers=ADMIN)
+    again = await api.post(REGISTER, json=body(), headers=ADMIN)
+    assert first.status_code == 201
+    assert again.status_code == 200  # a station that lost the code (failed signing) can recover it
+    assert again.json()["claim_code"] == first.json()["claim_code"]
+
+
+async def test_register_conflicting_device_409(api):
     assert (await api.post(REGISTER, json=body(), headers=ADMIN)).status_code == 201
-    assert (await api.post(REGISTER, json=body(), headers=ADMIN)).status_code == 409
+    assert (await api.post(REGISTER, json=body(tenant_id="tenant-b"), headers=ADMIN)).status_code == 409
+    assert (await api.post(REGISTER, json=body(device_type="sensor"), headers=ADMIN)).status_code == 409
 
 
 async def test_register_bad_type_422(api):

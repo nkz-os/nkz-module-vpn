@@ -69,14 +69,14 @@ def generate_csr(private_key: rsa.RSAPrivateKey, device_uuid: str, device_type: 
     return csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
 
 
-def _post(api_url: str, path: str, token: str, body: dict, expected: int) -> dict:
+def _post(api_url: str, path: str, token: str, body: dict, expected: tuple[int, ...]) -> dict:
     r = httpx.post(
         f"{api_url.rstrip('/')}/api/vpn{path}",
         json=body,
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
         timeout=60,
     )
-    if r.status_code != expected:
+    if r.status_code not in expected:
         detail = r.json().get("detail", r.text) if r.headers.get("content-type", "").startswith("application/json") else r.text
         print(f"ERROR {path}: HTTP {r.status_code} {detail}", file=sys.stderr)
         sys.exit(1)
@@ -115,13 +115,16 @@ def provision(args: argparse.Namespace) -> None:
     body = {"device_uuid": device_uuid, "device_type": args.type, "tenant_id": args.tenant}
     if args.name:
         body["display_name"] = args.name
-    claim_code = _post(args.api_url, "/factory/register-device", args.token, body, 201)["claim_code"]
-    print("1. Registered.")
+    # 201 on first registration, 200 when the same device is registered again
+    # (e.g. a previous run failed at signing): the code is the same either way.
+    claim_code = _post(args.api_url, "/factory/register-device", args.token, body, (200, 201))["claim_code"]
+    (out_dir / "claim_code.txt").write_text(f"{claim_code}\n")  # kept even if signing fails below
+    print(f"1. Registered. Claim code: {claim_code}")
 
     private_key, key_pem = generate_keypair()
     csr_pem = generate_csr(private_key, device_uuid, args.type)
     signed = _post(args.api_url, "/factory/sign-csr", args.token,
-                   {"csr_pem": csr_pem, "device_uuid": device_uuid}, 200)
+                   {"csr_pem": csr_pem, "device_uuid": device_uuid}, (200,))
     print("2. Certificate signed.")
 
     key_path = out_dir / "device.key"
@@ -129,7 +132,6 @@ def provision(args: argparse.Namespace) -> None:
     os.chmod(key_path, 0o600)
     (out_dir / "device.crt").write_text(signed["certificate_pem"])
     (out_dir / "ca.crt").write_text(signed["ca_pem"])
-    (out_dir / "claim_code.txt").write_text(f"{claim_code}\n")
     (out_dir / "nkz-device.json").write_text(json.dumps(
         {"device_uuid": device_uuid, "device_type": args.type, "tenant_id": args.tenant}, indent=2) + "\n")
     if args.type == "sensor":

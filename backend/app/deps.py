@@ -28,9 +28,10 @@ def get_services(request: Request) -> Services:
 
 
 def get_client_ip(request: Request) -> str | None:
-    """First hop of X-Forwarded-For (Traefik -> gateway preserve it), else the peer."""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    first = forwarded.split(",")[0].strip()
-    if first:
-        return first
-    return request.client.host if request.client else None
+    """Client address for the audit trail: first hop of X-Forwarded-For, else unknown.
+
+    Never the TCP peer: behind the api-gateway that is the gateway's own address.
+    Audit only — it is client-controlled and never used for limits.
+    """
+    first = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    return first or None

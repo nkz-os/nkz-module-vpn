@@ -53,12 +53,11 @@ class Settings(BaseSettings):
     # Pre-auth keys handed out at claim time.
     preauth_ttl_minutes: int = 30
 
-    # Claim rate limiting (Redis).
+    # Claim rate limiting (Redis): rejected codes per device / per organisation.
     redis_url: str = ""
     redis_password: str = ""
     claim_limit_per_device: int = 5
     claim_limit_per_tenant: int = 5
-    claim_limit_per_ip: int = 10
     claim_window_seconds: int = 3600
 
     # Device certificates (cert-manager).

@@ -27,11 +27,17 @@ from app.services.twin import TwinWriter
 logger = logging.getLogger(__name__)
 
 
+def redis_client_for(settings: Settings) -> redis_async.Redis:
+    """Bounded timeouts: a hung Redis must fail claims closed (503), not hang them."""
+    return redis_async.from_url(settings.redis_url, password=settings.redis_password or None,
+                                socket_timeout=2.0, socket_connect_timeout=2.0)
+
+
 async def build_services(settings: Settings) -> tuple[Services, list]:
     """Create every external client; return them with their close callbacks."""
     db = await Database.connect(settings.postgres_url)
     headscale = HeadscaleClient(settings.headscale_api_url, settings.headscale_api_key)
-    redis_client = redis_async.from_url(settings.redis_url, password=settings.redis_password or None)
+    redis_client = redis_client_for(settings)
     services = Services(
         settings=settings,
         db=db,

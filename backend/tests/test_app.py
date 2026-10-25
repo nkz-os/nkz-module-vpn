@@ -47,3 +47,25 @@ async def test_openapi_lists_all_routes(api):
                  "/api/vpn/factory/register-device", "/api/vpn/factory/sign-csr",
                  "/api/vpn/internal/devices/{device_uuid}"]:
         assert path in paths, path
+
+
+def test_client_ip_only_from_forwarded_header():
+    from starlette.requests import Request
+
+    from app.deps import get_client_ip
+
+    def req(headers):
+        return Request({"type": "http", "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()],
+                        "client": ("10.0.0.5", 1234)})
+
+    assert get_client_ip(req({})) is None  # never the proxy's own address
+    assert get_client_ip(req({"X-Forwarded-For": "203.0.113.7, 10.0.0.9"})) == "203.0.113.7"
+
+
+def test_redis_client_has_timeouts():
+    from app.config import Settings
+    from app.main import redis_client_for
+
+    client = redis_client_for(Settings(_env_file=None, redis_url="redis://127.0.0.1:6379/0"))
+    kwargs = client.connection_pool.connection_kwargs
+    assert kwargs["socket_timeout"] and kwargs["socket_connect_timeout"]

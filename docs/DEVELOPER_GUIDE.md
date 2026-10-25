@@ -49,7 +49,8 @@ locally, has the certificate signed, and writes `device.key` (mode 0600), `devic
 the key and certificate, then destroy the local copy of the key.
 
 The claim code is bound to the device UUID. It is the only thing the organisation needs to
-activate the device.
+activate the device. The tool writes `claim_code.txt` as soon as the device is registered; if
+a later step fails, running it again for the same device returns the same code.
 
 ## 4. Activation in the field
 
@@ -77,6 +78,6 @@ ip route get <zenoh-ip>   # goes through tailscale0
 
 ## 5. Revocation
 
-Revoking a device in the page removes its node from the tailnet immediately and marks it as
-revoked; the claim code can no longer be used. A revoked unit needs a new registration with a
-new UUID.
+Revoking a device in the page removes its node from the tailnet immediately, expires its VPN
+key if it was never used, and marks it as revoked; the claim code can no longer be used. A
+revoked unit needs a new registration with a new UUID.

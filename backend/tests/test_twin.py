@@ -102,3 +102,18 @@ async def test_mark_revoked_patches_attrs(writer):
     assert req.headers["Content-Type"] == "application/json"
     assert "rel=\"http://www.w3.org/ns/json-ld#context\"" in req.headers["Link"]
     assert json.loads(req.content) == {"deviceState": {"type": "Property", "value": "REVOKED"}}
+
+
+@respx.mock
+async def test_delete_removes_entity(writer):
+    entity = f"urn:ngsi-ld:ManufacturingMachine:acme:{UUID}"
+    route = respx.delete(f"{ORION}/ngsi-ld/v1/entities/{entity}").mock(return_value=httpx.Response(204))
+    await writer.delete(entity)
+    assert route.called
+
+
+@respx.mock
+async def test_delete_missing_entity_is_fine(writer):
+    entity = f"urn:ngsi-ld:ManufacturingMachine:acme:{UUID}"
+    respx.delete(f"{ORION}/ngsi-ld/v1/entities/{entity}").mock(return_value=httpx.Response(404))
+    await writer.delete(entity)

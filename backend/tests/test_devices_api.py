@@ -52,6 +52,10 @@ def mocks():
         router.post(UPSERT, name="upsert").mock(return_value=httpx.Response(204))
         router.patch(f"{ORION_URL}/ngsi-ld/v1/entities/{TWIN_ID}/attrs", name="patch").mock(
             return_value=httpx.Response(204))
+        router.delete(f"{ORION_URL}/ngsi-ld/v1/entities/{TWIN_ID}", name="twin_delete").mock(
+            return_value=httpx.Response(204))
+        router.get(f"{HEADSCALE_URL}/api/v1/preauthkey", name="keys").mock(
+            return_value=httpx.Response(200, json={"preAuthKeys": []}))
         yield router
 
 
@@ -163,6 +167,7 @@ async def test_claim_headscale_down_leaves_pending(api, db, mocks):
     r = await claim(api)
     assert r.status_code == 502
     assert (await state_of(db)).state == "PENDING"
+    assert mocks["twin_delete"].called  # no twin left saying CLAIMED
     assert (await claim(api)).status_code == 502  # still claimable once Headscale is back
 
 
@@ -186,7 +191,7 @@ async def test_claim_redis_down_503(api, db, mocks, services):
     async def down(*args, **kwargs):
         raise RateLimitUnavailable("down")
 
-    services.limiter.check = down
+    services.limiter.blocked = down
     await register(db)
     assert (await claim(api)).status_code == 503
 
@@ -316,3 +321,56 @@ async def test_revoke_twice_409(api, db, mocks):
     await register(db)
     assert (await api.delete(f"/api/vpn/devices/{UUID}", headers=ACME)).status_code == 204
     assert (await api.delete(f"/api/vpn/devices/{UUID}", headers=ACME)).status_code == 409
+
+
+async def test_onboarding_many_devices_is_not_throttled(api, db, mocks):
+    uuids = [f"00000000-0000-4000-8000-00000000000{i}" for i in range(6)]
+    for u in uuids:
+        await register(db, device_uuid=u)
+        code = generate_claim_code(u, FACTORY_SECRET, 1)
+        v = await api.post("/api/vpn/devices/validate", json={"device_uuid": u, "claim_code": code}, headers=ACME)
+        assert v.status_code == 200
+        assert (await claim(api, device_uuid=u, code=code)).status_code == 200
+
+
+async def test_sensor_claim_creates_no_vpn_key(api, db, mocks):
+    await register(db, device_type="sensor")
+    sensor_twin = f"urn:ngsi-ld:Device:acme:{UUID}"
+    r = await claim(api)
+    assert r.status_code == 200
+    assert r.json()["network"] is None
+    assert r.json()["ngsi_entity_id"] == sensor_twin
+    assert not mocks["preauth"].called
+    assert (await state_of(db)).preauth_key_id is None
+
+
+async def test_revoke_headscale_unreachable_keeps_state(api, db, mocks):
+    await register(db)
+    await claim(api)
+    mocks["nodes"].mock(return_value=httpx.Response(500))
+    r = await api.delete(f"/api/vpn/devices/{UUID}", headers=ACME)
+    assert r.status_code == 502
+    assert (await state_of(db)).state == "CLAIMED"
+
+
+async def test_revoke_ignores_stale_node_id(api, db, mocks):
+    await register(db)
+    await claim(api)
+    async with db.platform_tx() as conn:
+        await DeviceRepo(conn).set_node(UUID, node_id="77", node_hostname=UUID, node_ip="192.0.2.77")
+    delete = mocks.delete(url__regex=rf"{HEADSCALE_URL}/api/v1/node/.*")
+    r = await api.delete(f"/api/vpn/devices/{UUID}", headers=ACME)  # node removed outside the module
+    assert r.status_code == 204
+    assert not delete.called
+    assert (await state_of(db)).state == "REVOKED"
+
+
+async def test_revoke_expires_unused_key(api, db, mocks):
+    await register(db)
+    await claim(api)
+    mocks["keys"].mock(return_value=httpx.Response(200, json={"preAuthKeys": [
+        {"id": "13", "key": "tskey-secret-value", "used": False, "expiration": "2030-01-01T00:00:00Z"}]}))
+    r = await api.delete(f"/api/vpn/devices/{UUID}", headers=ACME)
+    assert r.status_code == 204
+    assert json.loads(mocks["expire"].calls.last.request.content) == {"user": "acme", "key": "tskey-secret-value"}
+    assert (await state_of(db)).state == "REVOKED"

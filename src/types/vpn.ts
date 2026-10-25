@@ -45,7 +45,7 @@ export interface ClaimOut {
   display_name: string | null;
   state: DeviceState;
   ngsi_entity_id: string;
-  network: NetworkOut;
+  network: NetworkOut | null; // robots and gateways only
 }
 
 export interface RegisterDeviceOut {

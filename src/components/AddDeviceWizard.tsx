@@ -42,17 +42,17 @@ export const AddDeviceWizard: React.FC<Props> = ({ onClose, onActivated }) => {
   };
 
   if (step === 'success' && result) {
-    const needsVpn = result.device_type !== 'sensor';
-    const command = joinCommand(result.network);
+    const network = result.network;
+    const command = network ? joinCommand(network) : '';
     return (
       <Card padding="lg">
         <Stack gap="stack">
           <span className="text-nkz-lg font-semibold text-nkz-text-primary">{t('wizard.successTitle')}</span>
-          {needsVpn && (
+          {network && (
             <Stack gap="inline">
               <span className="text-nkz-sm font-semibold text-nkz-text-primary">{t('wizard.keyTitle')}</span>
               <span className="text-nkz-xs text-nkz-text-secondary">
-                {t('wizard.expires', { when: new Date(result.network.expires_at).toLocaleString() })}
+                {t('wizard.expires', { when: new Date(network.expires_at).toLocaleString() })}
               </span>
               <span className="text-nkz-sm text-nkz-text-secondary">{t('wizard.command')}</span>
               <Inline gap="inline" align="center" wrap>

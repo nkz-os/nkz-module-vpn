@@ -69,6 +69,6 @@ def test_cors_origins_accepts_csv_and_json(clean_env, raw, expected):
 def test_claim_defaults_match_the_spec(clean_env):
     s = Settings(_env_file=None)
     assert s.preauth_ttl_minutes == 30
-    assert (s.claim_limit_per_device, s.claim_limit_per_tenant, s.claim_limit_per_ip) == (5, 5, 10)
+    assert (s.claim_limit_per_device, s.claim_limit_per_tenant) == (5, 5)
     assert s.claim_window_seconds == 3600
     assert s.api_prefix == "/api/vpn"

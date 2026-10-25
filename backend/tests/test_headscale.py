@@ -126,3 +126,31 @@ async def test_errors_never_carry_the_key(client):
     with pytest.raises(HeadscaleError) as exc:
         await client.expire_preauth_key("acme", "secret-key")
     assert "secret-key" not in str(exc.value)
+
+
+@respx.mock
+async def test_list_preauth_keys(client):
+    respx.get(f"{BASE}/api/v1/preauthkey", params={"user": "acme"}).mock(return_value=httpx.Response(200, json={
+        "preAuthKeys": [{"id": "13", "key": "k13", "used": False, "expiration": "2030-01-01T00:00:00Z"},
+                        {"id": "14", "key": "k14", "used": True, "expiration": "2030-01-01T00:00:00Z"}]}))
+    keys = await client.list_preauth_keys("acme")
+    assert [(k.id, k.key, k.used) for k in keys] == [("13", "k13", False), ("14", "k14", True)]
+
+
+@respx.mock
+async def test_expire_unused_key_by_id(client):
+    respx.get(f"{BASE}/api/v1/preauthkey", params={"user": "acme"}).mock(return_value=httpx.Response(200, json={
+        "preAuthKeys": [{"id": "13", "key": "k13", "used": False, "expiration": "2030-01-01T00:00:00Z"}]}))
+    expire = respx.post(f"{BASE}/api/v1/preauthkey/expire").mock(return_value=httpx.Response(200, json={}))
+    assert await client.expire_unused_key("acme", "13") is True
+    assert json.loads(expire.calls.last.request.content) == {"user": "acme", "key": "k13"}
+
+
+@respx.mock
+async def test_expire_unused_key_skips_used_or_missing(client):
+    respx.get(f"{BASE}/api/v1/preauthkey", params={"user": "acme"}).mock(return_value=httpx.Response(200, json={
+        "preAuthKeys": [{"id": "13", "key": "k13", "used": True, "expiration": "2030-01-01T00:00:00Z"}]}))
+    expire = respx.post(f"{BASE}/api/v1/preauthkey/expire")
+    assert await client.expire_unused_key("acme", "13") is False
+    assert await client.expire_unused_key("acme", "99") is False
+    assert not expire.called

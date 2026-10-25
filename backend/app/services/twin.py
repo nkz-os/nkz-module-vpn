@@ -68,3 +68,13 @@ class TwinWriter:
             await self._orion.update_entity_attrs(entity_id, {"deviceState": _prop("REVOKED")})
         except httpx.HTTPError as exc:
             raise TwinError(f"orion patch failed: {type(exc).__name__}") from None
+
+    async def delete(self, entity_id: str) -> None:
+        """Remove a twin; an absent twin is fine."""
+        try:
+            await self._orion.delete_entity(entity_id)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 404:
+                raise TwinError(f"orion delete failed: HTTP {exc.response.status_code}") from None
+        except httpx.HTTPError as exc:
+            raise TwinError(f"orion delete failed: {type(exc).__name__}") from None

@@ -31,6 +31,13 @@ class PreAuthKey:
 
 
 @dataclass(frozen=True)
+class KeyInfo:
+    id: str
+    key: str
+    used: bool
+
+
+@dataclass(frozen=True)
 class Node:
     id: str
     hostname: str
@@ -114,6 +121,19 @@ class HeadscaleClient:
 
     async def expire_preauth_key(self, user: str, key: str) -> None:
         await self._request("POST", "/api/v1/preauthkey/expire", json={"user": user, "key": key})
+
+    async def list_preauth_keys(self, user: str) -> list[KeyInfo]:
+        data = await self._request("GET", "/api/v1/preauthkey", params={"user": user})
+        return [KeyInfo(id=str(k.get("id", "")), key=k.get("key", ""), used=bool(k.get("used", False)))
+                for k in data.get("preAuthKeys") or []]
+
+    async def expire_unused_key(self, user: str, key_id: str) -> bool:
+        """Expire the pre-auth key with this id if it was never used. True if expired."""
+        for info in await self.list_preauth_keys(user):
+            if info.id == key_id and not info.used and info.key:
+                await self.expire_preauth_key(user, info.key)
+                return True
+        return False
 
     async def list_nodes(self, user: str) -> list[Node]:
         data = await self._request("GET", "/api/v1/node", params={"user": user})
