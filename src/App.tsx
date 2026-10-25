@@ -1,6 +1,6 @@
 /**
  * Main page of the Device Management module — lazily loaded as `main` by
- * moduleEntry.ts. Also rendered standalone by `pnpm dev` via src/main.tsx.
+ * Module.tsx. Also rendered standalone by `pnpm dev` via src/main.tsx.
  */
 import React from 'react';
 import './index.css';

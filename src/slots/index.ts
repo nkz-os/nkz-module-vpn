@@ -1,16 +1,10 @@
 /**
- * Slot definitions — declare which host slots this module occupies.
- *
- * Available slots:
- *   map-layer      — overlay or toolbar button on the 3D map
- *   layer-toggle   — toggle entry in the layer panel
- *   context-panel  — side panel shown when an entity is selected
- *   bottom-panel   — tabbed panel at the bottom of the viewer
- *   entity-tree    — context menu entry in the entity tree
- *   dashboard-widget — card in the tenant dashboard
+ * Host slots this module occupies: a dashboard card with device counts, and a
+ * context panel when a provisioned machine or device is selected in the viewer.
  */
 import type { ModuleViewerSlots } from '@nekazari/sdk';
-import { ExampleSlot } from '../components/slots/ExampleSlot';
+import { DeviceContextPanel } from '../components/slots/DeviceContextPanel';
+import { DeviceStatusWidget } from '../components/slots/DeviceStatusWidget';
 
 const MODULE_ID = 'vpn';
 
@@ -19,14 +13,23 @@ export const moduleSlots: ModuleViewerSlots = {
   'layer-toggle': [],
   'context-panel': [
     {
-      id: 'vpn-context',
+      id: 'vpn-device-context',
       moduleId: MODULE_ID,
-      component: 'ExampleSlot',
-      localComponent: ExampleSlot,
-      priority: 10,
+      component: 'DeviceContextPanel',
+      localComponent: DeviceContextPanel,
+      priority: 20,
+      showWhen: { entityType: ['ManufacturingMachine', 'Device'] },
     },
   ],
   'bottom-panel': [],
   'entity-tree': [],
-  'dashboard-widget': [],
+  'dashboard-widget': [
+    {
+      id: 'vpn-device-status',
+      moduleId: MODULE_ID,
+      component: 'DeviceStatusWidget',
+      localComponent: DeviceStatusWidget,
+      priority: 40,
+    },
+  ],
 };
