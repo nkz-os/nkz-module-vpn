@@ -73,3 +73,19 @@ def test_factory_secret_for_empty_secret_raises():
     s = Settings(_env_file=None, factory_secret_v1="")
     with pytest.raises(ValueError, match="version 1 not configured"):
         factory_secret_for(s, 1)
+
+
+def test_validate_ignores_inner_spaces_and_lookalikes():
+    code = generate_claim_code(UUID_A, SECRET, 1)          # e.g. V1-ABCD2345 (Base32: no 0/1/8/9)
+    body = code.split("-", 1)[1]
+    typed = "v1 - " + " ".join(body).lower().replace("o", "0").replace("i", "1").replace("b", "8")
+    assert validate_claim_code(UUID_A, typed, SECRET, 1)
+
+
+def test_normalize_keeps_version_digits():
+    assert normalize_claim_code("v1-0i8b") == "V1-OIBB"
+
+
+def test_second_secret_version_is_supported():
+    s = Settings(_env_file=None, factory_secret_v1="k1", factory_secret_v2="k2")
+    assert factory_secret_for(s, 2) == "k2"

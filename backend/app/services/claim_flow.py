@@ -171,19 +171,26 @@ def _match_node(device: Device, nodes: list[Node]) -> Node | None:
             or next((n for n in nodes if device.device_uuid in (n.given_name, n.hostname)), None))
 
 
-async def reconcile_node(svc: Services, device: Device, nodes: list[Node] | None = None) -> tuple[Device, Node | None]:
+@dataclass(frozen=True)
+class NetworkView:
+    device: Device
+    node: Node | None
+    unknown: bool  # True when Headscale could not be asked: "no node" would be a guess
+
+
+async def reconcile_node(svc: Services, device: Device, nodes: list[Node] | None = None) -> NetworkView:
     """Find the device's tailnet node; persist it the first time it is seen.
 
-    Headscale being unreachable degrades to "no node" (the registry stays readable).
+    Headscale being unreachable degrades to an unknown network state (the registry stays readable).
     """
     if device.state != "CLAIMED" or not device.headscale_user:
-        return device, None
+        return NetworkView(device, None, False)
     try:
         if nodes is None:
             nodes = await svc.headscale.list_nodes(device.headscale_user)
     except HeadscaleError as exc:
         logger.warning("node lookup failed: %s", exc, extra={"device_uuid": device.device_uuid})
-        return device, None
+        return NetworkView(device, None, True)
     node = _match_node(device, nodes)
     if node and node.id != device.node_id:
         async with svc.db.tenant_tx(device.tenant_id) as conn:
@@ -192,7 +199,44 @@ async def reconcile_node(svc: Services, device: Device, nodes: list[Node] | None
                                          node.hostname, node_ip=node.ip)
             await repo.add_event(device.device_uuid, device.tenant_id, "NODE_SEEN", "system", None,
                                  {"node_id": node.id})
-    return device, node
+    return NetworkView(device, node, False)
+
+
+async def reissue_key(svc: Services, *, tenant_id: str, device_uuid: str, actor: str, ip: str | None) -> PreAuthKey:
+    """New single-use key for a claimed robot/gateway that never joined (old key lapsed or lost).
+
+    Refused once a node exists — the device is on the network and needs no key.
+    The previous key is expired if still unused. Headscale unreachable: nothing changes.
+    """
+    preauth: PreAuthKey | None = None
+    try:
+        async with svc.db.tenant_tx(tenant_id) as conn:
+            repo = DeviceRepo(conn)
+            device = await repo.get_for_update(device_uuid)
+            if device is None:
+                raise _http(status.HTTP_404_NOT_FOUND, "Device not found")
+            if device.state != "CLAIMED" or device.device_type not in VPN_DEVICE_TYPES or not device.headscale_user:
+                raise _http(status.HTTP_409_CONFLICT, "Only an active robot or gateway can get a new key")
+            if _match_node(device, await svc.headscale.list_nodes(device.headscale_user)) is not None:
+                raise _http(status.HTTP_409_CONFLICT, "The device has already joined the network")
+            expired_old = bool(device.preauth_key_id) and await svc.headscale.expire_unused_key(
+                device.headscale_user, device.preauth_key_id)
+            preauth = await svc.headscale.create_preauth_key(device.headscale_user, svc.settings.preauth_ttl_minutes)
+            await repo.set_preauth(device_uuid, preauth_key_id=preauth.id, preauth_expires=preauth.expires_at)
+            await repo.add_event(device_uuid, tenant_id, "KEY_REISSUED", actor, ip,
+                                 {"preauth_key_id": preauth.id, "previous_expired": expired_old})
+    except HTTPException:
+        raise
+    except HeadscaleError as exc:
+        await _undo(svc, tenant_id, headscale_user_for(tenant_id), preauth, None, device_uuid)
+        logger.error("key reissue failed: %s", exc, extra={"device_uuid": device_uuid})
+        raise _http(status.HTTP_502_BAD_GATEWAY, "Device network provisioning failed, retry later") from None
+    except Exception as exc:
+        await _undo(svc, tenant_id, headscale_user_for(tenant_id), preauth, None, device_uuid)
+        logger.error("key reissue failed: %s", type(exc).__name__, extra={"device_uuid": device_uuid})
+        raise _http(status.HTTP_502_BAD_GATEWAY, "Key reissue failed, retry later") from None
+    logger.info("device key reissued", extra={"device_uuid": device_uuid, "tenant_id": tenant_id})
+    return preauth
 
 
 async def revoke(svc: Services, *, tenant_id: str, device_uuid: str, actor: str, ip: str | None) -> None:

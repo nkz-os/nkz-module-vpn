@@ -69,6 +69,7 @@ class DeviceOut(BaseModel):
     state: str
     ngsi_entity_id: str | None
     node: NodeOut | None
+    network_unknown: bool = False  # Headscale could not be asked; `node: null` is then not "not joined"
 
 
 class DeviceListOut(BaseModel):
@@ -87,11 +88,12 @@ class DeviceEventsOut(BaseModel):
     events: list[DeviceEventOut]
 
 
-def _device_out(device: Device, node: Node | None) -> DeviceOut:
+def _device_out(device: Device, node: Node | None, unknown: bool = False) -> DeviceOut:
     return DeviceOut(
         device_uuid=device.device_uuid, tenant_id=device.tenant_id, device_type=device.device_type,
         display_name=device.display_name, state=device.state, ngsi_entity_id=device.ngsi_entity_id,
         node=NodeOut(online=node.online, last_seen=node.last_seen, ip=node.ip) if node else None,
+        network_unknown=unknown,
     )
 
 
@@ -131,7 +133,7 @@ async def list_devices(all_tenants: bool = Query(False), auth: AuthContext = Dep
     nodes_by_user: dict[str, list[Node] | None] = {}
     out: list[DeviceOut] = []
     for device in devices:
-        node = None
+        node, unknown = None, False
         if device.state == "CLAIMED" and device.headscale_user:
             if device.headscale_user not in nodes_by_user:
                 try:
@@ -139,9 +141,12 @@ async def list_devices(all_tenants: bool = Query(False), auth: AuthContext = Dep
                 except HeadscaleError:
                     nodes_by_user[device.headscale_user] = None
             nodes = nodes_by_user[device.headscale_user]
-            if nodes is not None:
-                device, node = await claim_flow.reconcile_node(svc, device, nodes)
-        out.append(_device_out(device, node))
+            if nodes is None:
+                unknown = True
+            else:
+                view = await claim_flow.reconcile_node(svc, device, nodes)
+                device, node = view.device, view.node
+        out.append(_device_out(device, node, unknown))
     return DeviceListOut(devices=out, total=len(out))
 
 
@@ -157,8 +162,8 @@ async def _get_device(svc: Services, tenant_id: str, device_uuid: UUID) -> Devic
 async def get_device(device_uuid: UUID, auth: AuthContext = Depends(_tenant_admin),
                      svc: Services = Depends(get_services)):
     device = await _get_device(svc, auth.tenant_id, device_uuid)
-    device, node = await claim_flow.reconcile_node(svc, device)
-    return _device_out(device, node)
+    view = await claim_flow.reconcile_node(svc, device)
+    return _device_out(view.device, view.node, view.unknown)
 
 
 @router.get("/{device_uuid}/events", response_model=DeviceEventsOut)
@@ -177,3 +182,12 @@ async def revoke_device(device_uuid: UUID, request: Request, auth: AuthContext =
     await claim_flow.revoke(svc, tenant_id=auth.tenant_id, device_uuid=str(device_uuid), actor=auth.user_id,
                             ip=get_client_ip(request))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{device_uuid}/reissue-key", response_model=NetworkOut)
+async def reissue_key(device_uuid: UUID, request: Request, auth: AuthContext = Depends(_tenant_admin),
+                      svc: Services = Depends(get_services)):
+    preauth = await claim_flow.reissue_key(svc, tenant_id=auth.tenant_id, device_uuid=str(device_uuid),
+                                           actor=auth.user_id, ip=get_client_ip(request))
+    return NetworkOut(login_server=svc.settings.headscale_public_url, preauth_key=preauth.key,
+                      expires_at=preauth.expires_at, hostname=str(device_uuid))

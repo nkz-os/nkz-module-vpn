@@ -120,6 +120,16 @@ class DeviceRepo:
             raise InvalidTransition(f"{device_uuid}: missing")
         return _device(row)
 
+    async def set_preauth(self, device_uuid: str, *, preauth_key_id: str, preauth_expires: datetime | None) -> Device:
+        row = await self._conn.fetchrow(
+            f"UPDATE devices SET preauth_key_id = $2, preauth_expires = $3, updated_at = now() "
+            f"WHERE device_uuid = $1 AND state = 'CLAIMED' RETURNING {_DEVICE_COLUMNS}",
+            device_uuid, preauth_key_id, preauth_expires,
+        )
+        if row is None:
+            raise InvalidTransition(f"{device_uuid}: key reissue requires CLAIMED")
+        return _device(row)
+
     async def set_cert_fingerprint(self, device_uuid: str, fingerprint: str) -> None:
         await self._conn.execute(
             "UPDATE devices SET cert_fingerprint = $2, updated_at = now() WHERE device_uuid = $1",

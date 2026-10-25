@@ -97,10 +97,18 @@ class HeadscaleClient:
         return resp.json() if resp.content else {}
 
     async def ensure_user(self, name: str) -> None:
-        users = (await self._request("GET", "/api/v1/user")).get("users") or []
-        if any(u.get("name") == name for u in users):
+        if await self._user_exists(name):
             return
-        await self._request("POST", "/api/v1/user", json={"name": name})
+        try:
+            await self._request("POST", "/api/v1/user", json={"name": name})
+        except HeadscaleError:
+            if await self._user_exists(name):  # created concurrently by another claim
+                return
+            raise
+
+    async def _user_exists(self, name: str) -> bool:
+        users = (await self._request("GET", "/api/v1/user")).get("users") or []
+        return any(u.get("name") == name for u in users)
 
     async def create_preauth_key(
         self, user: str, ttl_minutes: int, tags: tuple[str, ...] = (FIELD_DEVICE_TAG,)
