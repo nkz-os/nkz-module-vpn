@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan handler for startup/shutdown events."""
     settings = get_settings()
+    settings.validate_required()  # fail fast: refuse to run half-configured
     logger.info("%s v%s starting — prefix=%s debug=%s",
                 settings.app_name, settings.app_version,
                 settings.api_prefix, settings.debug)
@@ -46,7 +47,7 @@ def create_app() -> FastAPI:
     # CORS Middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=settings.cors_origin_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
