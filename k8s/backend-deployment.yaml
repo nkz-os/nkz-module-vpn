@@ -100,7 +100,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: internal-service-secret
-                  key: secret
+                  key: INTERNAL_SERVICE_SECRET
             - name: HEADSCALE_PUBLIC_URL
               valueFrom:
                 configMapKeyRef:
