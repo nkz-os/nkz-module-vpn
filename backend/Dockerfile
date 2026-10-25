@@ -1,6 +1,6 @@
 # Multi-stage build for Backend
 # Stage 1: Dependencies
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Stage 2: Production image
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -26,6 +26,8 @@ COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
 
 # Copy application code
 COPY --chown=appuser:appuser app/ ./app/
+# SQL migrations, applied by `python -m app.db.migrate` (initContainer)
+COPY --chown=appuser:appuser migrations/ ./migrations/
 
 # Switch to non-root user
 USER appuser

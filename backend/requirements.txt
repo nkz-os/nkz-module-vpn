@@ -20,12 +20,3 @@ cryptography==50.0.2
 # Nekazari Platform SDK — gateway-header auth with X-Auth-Signature check
 # (require_auth), OrionClient for NGSI-LD.
 nkz-platform-sdk==0.13.0
-
-# Testing
-pytest==9.1.1
-pytest-asyncio==1.4.0
-respx==0.23.1
-fakeredis==2.40.0
-
-# Development
-ruff==0.17.2
