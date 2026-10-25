@@ -1,0 +1,8 @@
+# Reference templates. Production manifests live in the deployment's own
+# configuration repository; replace the image placeholder there with a digest.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - vpn-config.yaml
+  - backend-deployment.yaml
+  - network-policy.yaml

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vpn-config
+  namespace: nekazari
+  labels:
+    app: vpn-backend
+    module: vpn
+data:
+  HEADSCALE_API_URL: "http://headscale-service:8080"
+  ORION_LD_URL: "http://orion-ld-service:1026"
+  CONTEXT_URL: "http://api-gateway-service:5000/ngsi-ld-context.json"
+  REDIS_URL: "redis://redis-service:6379/0"
+  PREAUTH_TTL_MINUTES: "30"
+  IOT_CA_ISSUER: "nekazari-iot-ca"
+  K8S_NAMESPACE: "nekazari"
+  REQUIRE_HMAC_SIGNATURE: "true"

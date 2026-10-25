@@ -1,11 +1,12 @@
 # =============================================================================
-# Device Management Backend Deployment
+# Device Management (vpn module) — backend
 # =============================================================================
-# Backend API service for Device Management module
+# Secrets (not in this file): db-nkz-module-vpn (own database nkz_vpn),
+# nkz-network-controller-secret (headscale-api-key, factory-secret-v1),
+# redis-secret, jwt-secret (gateway signature), internal-service-secret.
+# Non-secret config: vpn-config.yaml.
 # =============================================================================
-
 ---
-# Deployment: Device Management Backend Service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,9 +14,7 @@ metadata:
   namespace: nekazari
   labels:
     app: vpn-backend
-    component: backend
     module: vpn
-    nkz-os.org/profile: addon
 spec:
   replicas: 1
   selector:
@@ -25,78 +24,119 @@ spec:
     metadata:
       labels:
         app: vpn-backend
-        component: backend
         module: vpn
+        nkz-os.org/postgres-client: "true"
+        nkz-os.org/redis-client: "true"
+        nkz-os.org/orion-client: "true"
     spec:
+      serviceAccountName: vpn-backend-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # Schema migrations run before the API starts; the API container does no DDL.
+        - name: migrate
+          image: ghcr.io/YOUR_ORG/nkz-module-vpn/network-controller:YOUR_TAG
+          command: ["python", "-m", "app.db.migrate"]
+          env:
+            - name: POSTGRES_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-nkz-module-vpn
+                  key: url
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
       containers:
-        - name: backend
-          image: ghcr.io/nkz-os/vpn-backend:v1.0.0
-          imagePullPolicy: Always
+        - name: api
+          image: ghcr.io/YOUR_ORG/nkz-module-vpn/network-controller:YOUR_TAG
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8000
-          # Non-secret config (service URLs, CORS origins) belongs in a
-          # ConfigMap overlay in gitops-config/overlays/modules/vpn/ —
-          # NOT in this public repo. `optional: true` so config.py's own
-          # defaults apply when the ConfigMap doesn't exist (e.g. local dev).
           envFrom:
             - configMapRef:
                 name: vpn-config
-                optional: true
           env:
-            - name: APP_NAME
-              value: "Device Management"
-            - name: DEBUG
-              value: "false"
-            - name: API_PREFIX
-              value: "/api/vpn"
-            # CORS — explicit origin whitelist (never *). This is a local
-            # placeholder; the production value lives in the ConfigMap overlay.
-            - name: CORS_ORIGINS
-              value: '["https://your-frontend-domain"]'
-            # Auth: this module trusts gateway-injected headers (X-Tenant-ID,
-            # X-User-ID, X-User-Roles) via nkz_platform_sdk.auth.require_auth —
-            # no Keycloak/JWT config needed here (see app/middleware).
-            # Internal service-to-service auth (/internal/* routes only) —
-            # shared K8s Secret, hmac.compare_digest verification.
+            - name: POSTGRES_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-nkz-module-vpn
+                  key: url
+            - name: HEADSCALE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nkz-network-controller-secret
+                  key: headscale-api-key
+            - name: FACTORY_SECRET_V1
+              valueFrom:
+                secretKeyRef:
+                  name: nkz-network-controller-secret
+                  key: factory-secret-v1
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: password
+            - name: HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: secret
             - name: INTERNAL_SERVICE_SECRET
               valueFrom:
                 secretKeyRef:
                   name: internal-service-secret
                   key: secret
-                  optional: true
-          # Database (only if this module writes admin/metadata to PostgreSQL —
-          # NEVER for time-series/telemetry, which flows through Orion-LD
-          # subscriptions only. See app/config.py:require_postgres_url.)
-          # - name: POSTGRES_URL
-          #   valueFrom:
-          #     secretKeyRef:
-          #       name: postgresql-secret
-          #       key: connection-string
+            - name: HEADSCALE_PUBLIC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: headscale_public_url
+            - name: CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: cors_origins
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              cpu: 50m
+              memory: 128Mi
             limits:
-              memory: "256Mi"
-              cpu: "200m"
+              cpu: 300m
+              memory: 256Mi
           livenessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: http
             initialDelaySeconds: 15
-            periodSeconds: 30
-            timeoutSeconds: 5
+            periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 10
-            timeoutSeconds: 3
-
 ---
-# Service: Device Management Backend API
 apiVersion: v1
 kind: Service
 metadata:
@@ -106,11 +146,47 @@ metadata:
     app: vpn-backend
     module: vpn
 spec:
-  type: ClusterIP
-  ports:
-    - port: 8000
-      targetPort: 8000
-      protocol: TCP
-      name: http
   selector:
     app: vpn-backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+  type: ClusterIP
+---
+# Device certificates: create/read/delete cert-manager CertificateRequests only.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpn-backend-sa
+  namespace: nekazari
+  labels:
+    app: vpn-backend
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vpn-backend-certificaterequests
+  namespace: nekazari
+  labels:
+    app: vpn-backend
+rules:
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificaterequests"]
+    verbs: ["create", "get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vpn-backend-certificaterequests
+  namespace: nekazari
+  labels:
+    app: vpn-backend
+subjects:
+  - kind: ServiceAccount
+    name: vpn-backend-sa
+    namespace: nekazari
+roleRef:
+  kind: Role
+  name: vpn-backend-certificaterequests
+  apiGroup: rbac.authorization.k8s.io
