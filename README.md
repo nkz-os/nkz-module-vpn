@@ -55,6 +55,7 @@ robotics ───── X-Internal-Service-Secret ──► /api/vpn/internal/*
 | `POST /devices/claim` | TenantAdmin, PlatformAdmin | Claim: twin + single-use pre-auth key (shown once) |
 | `GET /devices` | TenantAdmin, PlatformAdmin | List (`?all_tenants=true` for PlatformAdmin) with live VPN state |
 | `GET /devices/{uuid}`, `/devices/{uuid}/events` | TenantAdmin, PlatformAdmin | Detail and audit trail |
+| `POST /devices/{uuid}/reissue-key` | TenantAdmin, PlatformAdmin | New single-use key for an active robot/gateway that never joined |
 | `DELETE /devices/{uuid}` | TenantAdmin, PlatformAdmin | Revoke |
 | `GET /internal/devices/{uuid}` | internal secret | Lookup for other platform services |
 

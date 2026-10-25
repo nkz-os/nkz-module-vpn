@@ -17,6 +17,7 @@ export interface DeviceOut {
   state: DeviceState;
   ngsi_entity_id: string | null;
   node: NodeOut | null;
+  network_unknown: boolean; // VPN state could not be read (do not show it as "not joined")
 }
 
 export interface DeviceListOut {

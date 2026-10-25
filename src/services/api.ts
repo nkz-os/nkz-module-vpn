@@ -13,6 +13,7 @@ import type {
   DeviceListOut,
   DeviceOut,
   DeviceType,
+  NetworkOut,
   RegisterDeviceOut,
   ValidateOut,
 } from '../types/vpn';
@@ -61,6 +62,7 @@ export const vpnApi = {
   validateDevice: (body: { device_uuid: string; claim_code: string }) => post<ValidateOut>('/devices/validate', body),
   claimDevice: (body: { device_uuid: string; claim_code: string; display_name?: string }) =>
     post<ClaimOut>('/devices/claim', body),
+  reissueKey: (uuid: string) => post<NetworkOut>(`/devices/${id(uuid)}/reissue-key`, {}),
   revokeDevice: (uuid: string) => request<void>(`/devices/${id(uuid)}`, { method: 'DELETE' }),
   registerDevice: (body: { device_uuid: string; device_type: DeviceType; tenant_id: string; display_name?: string }) =>
     post<RegisterDeviceOut>('/factory/register-device', body),

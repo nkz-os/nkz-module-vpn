@@ -30,3 +30,17 @@ export function joinCommand(network: NetworkOut): string {
     '--accept-routes',
   ].join(' ');
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Device UUID from a twin id (urn:ngsi-ld:<Type>:<tenant>:<uuid>); null for any other entity. */
+export function entityDeviceUuid(entityId: string | null | undefined): string | null {
+  const last = entityId?.split(':').pop() ?? '';
+  return UUID_RE.test(last) ? last.toLowerCase() : null;
+}
+
+const REVOKE_ERRORS = new Set([404, 409, 502]);
+
+export function revokeErrorKey(status: number | undefined): string {
+  return status !== undefined && REVOKE_ERRORS.has(status) ? `revoke.error.${status}` : 'revoke.error.generic';
+}

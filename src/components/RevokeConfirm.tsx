@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Input, Inline, Stack } from '@nekazari/ui-kit';
 import { ApiError, vpnApi } from '../services/api';
+import { revokeErrorKey } from '../lib/format';
 import type { DeviceOut } from '../types/vpn';
 
 interface Props {
@@ -15,16 +16,16 @@ export const RevokeConfirm: React.FC<Props> = ({ device, onCancel, onRevoked }) 
   const { t } = useTranslation('vpn');
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failureKey, setFailureKey] = useState<string | null>(null);
 
   const confirm = async () => {
     setBusy(true);
-    setFailure(null);
+    setFailureKey(null);
     try {
       await vpnApi.revokeDevice(device.device_uuid);
       onRevoked();
     } catch (err: unknown) {
-      setFailure(err instanceof ApiError ? err.detail || `HTTP ${err.status}` : String(err));
+      setFailureKey(revokeErrorKey(err instanceof ApiError ? err.status : undefined));
     } finally {
       setBusy(false);
     }
@@ -40,7 +41,7 @@ export const RevokeConfirm: React.FC<Props> = ({ device, onCancel, onRevoked }) 
           {t('revoke.confirmInstruction')}
           <Input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} />
         </label>
-        {failure && <span className="text-nkz-sm text-nkz-danger">{t('revoke.failed', { message: failure })}</span>}
+        {failureKey && <span className="text-nkz-sm text-nkz-danger">{t(failureKey)}</span>}
         <Inline justify="end" gap="inline">
           <Button variant="ghost" onClick={onCancel}>{t('revoke.cancel')}</Button>
           <Button variant="danger" loading={busy} disabled={busy || typed.trim() !== device.device_uuid}

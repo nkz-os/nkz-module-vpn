@@ -15,6 +15,7 @@ export const StateBadge: React.FC<{ state: DeviceOut['state'] }> = ({ state }) =
 export const NodeStatus: React.FC<{ device: DeviceOut }> = ({ device }) => {
   const { t } = useTranslation('vpn');
   if (device.state !== 'CLAIMED' || device.device_type === 'sensor') return null;
+  if (device.network_unknown) return <Badge intent="default">{t('list.networkUnknown')}</Badge>;
   if (!device.node) return <Badge intent="default">{t('list.notJoined')}</Badge>;
   const seen = device.node.last_seen ? relativeTime(device.node.last_seen) : null;
   return (

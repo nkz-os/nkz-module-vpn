@@ -1,14 +1,10 @@
 # =============================================================================
 # Device Management - GitHub Actions CI/CD
 # =============================================================================
-# On push to main or a version tag:
-#   1. Type-check frontend + run backend tests
-#   2. Build the Module Federation 2.0 remote (dist/remoteEntry.js,
-#      dist/mf-manifest.json, dist/assets/*) — uploaded as artifact
-#   3. Build and push the backend Docker image to GHCR (if module has a backend)
-#
-# After customizing for your module, add MinIO deploy + activation steps
-# for immutable versioned deploys (see nkz-module-vpn for reference).
+# Pull requests: frontend typecheck + tests, backend lint + tests against a real
+# PostgreSQL, MF2 build. Push to main additionally builds and pushes the backend
+# image (tagged with the full commit SHA) and publishes the frontend through the
+# platform's OIDC publish workflow.
 # =============================================================================
 
 name: Build and Push
@@ -163,8 +159,7 @@ jobs:
     # ==========================================================================
     # Build and push backend Docker image
     # ==========================================================================
-    # Skipped until the placeholders are replaced — see the `guard` job. Without
-    # this gate the image would publish as `vpn-backend`.
+    # Skipped until the placeholders are replaced — see the `guard` job.
     build-backend:
         name: Build Backend Image
         runs-on: ubuntu-latest

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claimErrorKey, joinCommand, relativeTime } from './format';
+import { claimErrorKey, entityDeviceUuid, joinCommand, relativeTime, revokeErrorKey } from './format';
 
 describe('relativeTime', () => {
   const now = new Date('2026-10-25T12:00:00Z');
@@ -26,5 +26,24 @@ describe('joinCommand', () => {
     expect(
       joinCommand({ login_server: 'https://vpn.example.test', preauth_key: 'k', hostname: 'h', expires_at: 'x' }),
     ).toBe('sudo tailscale up --login-server=https://vpn.example.test --authkey=k --hostname=h --accept-routes');
+  });
+});
+
+describe('entityDeviceUuid', () => {
+  it('takes the device UUID from a twin id and ignores anything else', () => {
+    const u = '3f1c2a9e-7b4d-4c1e-9a2b-1d2e3f4a5b6c';
+    expect(entityDeviceUuid(`urn:ngsi-ld:ManufacturingMachine:acme:${u}`)).toBe(u);
+    expect(entityDeviceUuid(`urn:ngsi-ld:Device:acme:${u}`)).toBe(u);
+    expect(entityDeviceUuid('urn:ngsi-ld:ManufacturingMachine:acme:tractor-7')).toBeNull();
+    expect(entityDeviceUuid(null)).toBeNull();
+  });
+});
+
+describe('revokeErrorKey', () => {
+  it('maps known statuses and falls back to generic', () => {
+    expect(revokeErrorKey(404)).toBe('revoke.error.404');
+    expect(revokeErrorKey(409)).toBe('revoke.error.409');
+    expect(revokeErrorKey(502)).toBe('revoke.error.502');
+    expect(revokeErrorKey(500)).toBe('revoke.error.generic');
   });
 });
