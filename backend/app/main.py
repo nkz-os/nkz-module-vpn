@@ -1,56 +1,76 @@
 """
-NKZ Network Controller — FastAPI application.
+Device Management Backend - FastAPI Application
 
-Responsabilidades:
-    - Gestión del ciclo de vida de dispositivos IoT (claim codes, ZTP)
-    - Integración con Headscale (plano de control SDN)
-    - Firma de certificados X.509 via cert-manager
-    - Endpoints de consulta de peers para el módulo connectivity
-
-Este servicio es el ÚNICO autorizado a llamar a la API de Headscale.
+Main entry point for the backend service.
 """
 
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.db.database import init_db
-from app.routes import devices, factory, peers
-from app.middleware.rate_limit import limiter
+from app.config import get_settings
+from app.logging_setup import configure_logging
+from app.api import router as api_router
+from app.api.internal import router as internal_router
 
 logger = logging.getLogger(__name__)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-
-from app.config import settings as _s
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting NKZ Network Controller...")
-    _ = _s.jwt_issuer_url  # Force early evaluation — fail at startup if JWT issuer is unconfigured
-    await init_db()
-    logger.info("Database tables ready.")
+    """Application lifespan handler for startup/shutdown events."""
+    settings = get_settings()
+    logger.info("%s v%s starting — prefix=%s debug=%s",
+                settings.app_name, settings.app_version,
+                settings.api_prefix, settings.debug)
     yield
-    logger.info("Shutting down NKZ Network Controller.")
+    logger.info("%s shutting down", settings.app_name)
 
 
-app = FastAPI(
-    title="NKZ Network Controller",
-    description="Device provisioning, SDN management and PKI for Nekazari IoT.",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+def create_app() -> FastAPI:
+    """Application factory."""
+    settings = get_settings()
+    configure_logging(settings.log_level)
+    
+    app = FastAPI(
+        title=settings.app_name,
+        version=settings.app_version,
+        description="Device Management - Backend API for Nekazari Platform",
+        docs_url=f"{settings.api_prefix}/docs",
+        redoc_url=f"{settings.api_prefix}/redoc",
+        openapi_url=f"{settings.api_prefix}/openapi.json",
+        lifespan=lifespan,
+    )
+    
+    # CORS Middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Health check (at root for k8s probes)
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint for Kubernetes probes."""
+        return {
+            "status": "healthy",
+            "service": settings.app_name,
+            "version": settings.app_version,
+        }
+    
+    # Include API routes
+    app.include_router(api_router, prefix=settings.api_prefix)
 
-app.include_router(devices.router, prefix="/api/vpn")
-app.include_router(factory.router, prefix="/api/vpn")
-app.include_router(peers.router, prefix="/api/vpn")
+    # Internal routes (entity-manager, other in-cluster callers) — authenticated
+    # by X-Internal-Service-Secret, NOT gateway headers. See app/api/internal.py.
+    app.include_router(internal_router, prefix=settings.api_prefix)
+
+    return app
 
 
-@app.get("/health")
-@limiter.exempt
-async def health():
-    return {"status": "healthy", "service": "nkz-network-controller", "version": "1.0.0"}
+# Create application instance
+app = create_app()

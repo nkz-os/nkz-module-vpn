@@ -1,55 +1,49 @@
 -- =============================================================================
--- nekazari-module-vpn: Database registration
+-- Device Management — Marketplace Registration
 -- =============================================================================
--- Run ONCE after deploying the module for the first time.
--- The provisioned_devices table is created by the app (SQLAlchemy create_all).
+-- Run once per environment to register this module in marketplace_modules.
+-- Tenants then activate it via the UI (tenant_installed_modules).
 -- =============================================================================
 
--- 1. Register in marketplace_modules
 INSERT INTO marketplace_modules (
     id,
     name,
     display_name,
     description,
+    remote_entry_url,
     version,
     author,
     category,
+    route_path,
+    label,
     module_type,
     required_plan_type,
     pricing_tier,
-    route_path,
-    label,
-    icon,
-    required_roles,
-    remote_entry_url,
+    is_local,
     is_active,
-    created_at
+    required_roles,
+    metadata
 ) VALUES (
     'vpn',
     'vpn',
     'Device Management',
-    'Zero-Touch Provisioning for field devices via Headscale SDN. Add robots, gateways and sensors using a Claim Code.',
+    'Device Management — Description of your module',
+    '/modules/vpn/mf-manifest.json',
     '1.0.0',
-    'Robotika Engineering',
-    'connectivity',
-    'ADDON_CORE',
-    'free',
+    'nkz-os',
+    'analytics',
+    '//devices',
+    'Device Management',
+    'ADDON_FREE',
+    'basic',
     'FREE',
-    '/devices',
-    'Devices',
-    'wifi',
-    ARRAY['TenantAdmin', 'PlatformAdmin'],
-    '/modules/vpn/nekazari-module.js',
+    false,
     true,
-    NOW()
+    ARRAY['Farmer', 'TenantAdmin', 'PlatformAdmin'],
+    '{"icon": "🔧", "color": "#3B82F6", "description_i18n": {"es": "DESCRIPCIÓN_EN_ESPAÑOL", "en": "DESCRIPTION_IN_ENGLISH", "eu": "DESKRIBAPENA_EUSKARAZ", "fr": "DESCRIPTION_EN_FRANÇAIS", "pt": "DESCRIÇÃO_EM_PORTUGUÊS", "ca": "DESCRIPCIÓ_EN_CATALÀ"}}'::jsonb
 ) ON CONFLICT (id) DO UPDATE SET
-    display_name    = EXCLUDED.display_name,
-    description     = EXCLUDED.description,
-    version         = EXCLUDED.version,
+    display_name   = EXCLUDED.display_name,
+    description    = EXCLUDED.description,
     remote_entry_url = EXCLUDED.remote_entry_url,
-    is_active       = EXCLUDED.is_active;
-
--- 2. Auto-enable for all existing tenants (optional — remove if manual activation preferred)
--- INSERT INTO tenant_installed_modules (tenant_id, module_id, enabled_at)
--- SELECT id, 'vpn', NOW() FROM tenants
--- ON CONFLICT (tenant_id, module_id) DO NOTHING;
+    is_active      = true,
+    updated_at     = NOW();

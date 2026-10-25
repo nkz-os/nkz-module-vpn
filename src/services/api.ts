@@ -1,136 +1,48 @@
 /**
- * NKZ VPN Module API Client
+ * API Client for Device Management
  *
- * Provides type-safe access to the nkz-network-controller backend.
- * Requests are authenticated via the httpOnly cookie (nkz_token).
+ * This is a template for creating an API client that uses the Nekazari SDK.
+ * Replace with your actual API endpoints and methods.
  */
 
-// =============================================================================
-// Types
-// =============================================================================
+import { NKZClient, useAuth } from '@nekazari/sdk';
 
-export type DeviceType = 'rover' | 'gateway' | 'sensor_esp32';
-export type DeviceState = 'PENDING' | 'CONSUMED' | 'REVOKED';
+// The frontend host and the API can live on different domains (MF2 modules
+// run inside the host's origin while the API is served from a separate
+// host) — a relative baseUrl silently breaks cross-origin. There is NO useConfig() hook in
+// @nekazari/sdk; read the API base at build time via VITE_API_URL, with a
+// placeholder fallback so this never silently points at a real domain.
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://your-api-domain';
 
-export interface Device {
-  device_uuid: string;
-  device_type: DeviceType;
-  device_name: string | null;
-  state: DeviceState;
-  headscale_peer_id: string | null;
-  online: boolean;
-  last_seen: string | null;
-  tenant_id?: string | null;
+/**
+ * Hook to get API client instance
+ * Automatically handles authentication and tenant context
+ */
+export function useModuleApi() {
+  const { getToken, getTenantId } = useAuth();
+
+  const client = new NKZClient({
+    baseUrl: `${API_BASE}/api/vpn`,
+    getToken,
+    getTenantId,
+  });
+
+  return {
+    // Example API methods - replace with your actual endpoints
+    getData: () => client.get('/data'),
+    getDataById: (id: string) => client.get(`/data/${id}`),
+    createData: (data: any) => client.post('/data', data),
+    updateData: (id: string, data: any) => client.put(`/data/${id}`, data),
+    deleteData: (id: string) => client.delete(`/data/${id}`),
+  };
 }
 
-export interface DeviceListResponse {
-  devices: Device[];
-  total: number;
-  max_devices: number;
+/**
+ * Standalone API client (for use outside React components)
+ */
+export function createModuleApiClient() {
+  // This would need token and tenantId passed in
+  // For React components, use useModuleApi() instead
+  throw new Error('Use useModuleApi() hook in React components');
 }
 
-export interface ClaimRequest {
-  device_uuid: string;
-  claim_code: string;
-  device_name?: string;
-}
-
-export interface ClaimResponse {
-  device_uuid: string;
-  device_type: DeviceType;
-  device_name: string | null;
-  preauth_key: string | null;
-  login_server: string | null;
-  ngsi_entity_id: string | null;
-  state: DeviceState;
-}
-
-// =============================================================================
-// Tenant ID resolver
-// =============================================================================
-
-function getTenantId(): string | null {
-  const ctx = (window as any).__nekazariAuthContext;
-  return ctx?.tenantId || null;
-}
-
-// =============================================================================
-// API Client
-// =============================================================================
-
-class VpnApiClient {
-  private readonly base = '/api/vpn';
-
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const tenantId = getTenantId();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
-    };
-    if (tenantId) headers['X-Tenant-ID'] = tenantId;
-
-    const res = await fetch(`${this.base}${endpoint}`, {
-      ...options,
-      credentials: 'include',
-      headers,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as any).detail || `API error: ${res.status}`);
-    }
-    if (res.status === 204) return undefined as unknown as T;
-    return res.json();
-  }
-
-  /** List all provisioned devices for the current tenant */
-  listDevices(allTenants = false): Promise<DeviceListResponse> {
-    const qs = allTenants ? '?all_tenants=true' : '';
-    return this.request(`/devices/${qs}`);
-  }
-
-  /** Get real-time status of a single device (includes Headscale online state) */
-  getDeviceStatus(uuid: string): Promise<Device> {
-    return this.request(`/devices/${encodeURIComponent(uuid)}/status`);
-  }
-
-  /** Activate a device using its Claim Code */
-  claimDevice(req: ClaimRequest): Promise<ClaimResponse> {
-    return this.request('/devices/claim', {
-      method: 'POST',
-      body: JSON.stringify(req),
-    });
-  }
-
-  /** Revoke a device (removes from Headscale, marks REVOKED) */
-  revokeDevice(uuid: string): Promise<void> {
-    return this.request(`/devices/${encodeURIComponent(uuid)}`, { method: 'DELETE' });
-  }
-
-  /** Get audit log entries for a device (PlatformAdmin or owning tenant) */
-  getAuditLog(uuid: string): Promise<AuditLogEntry[]> {
-    return this.request(`/devices/${encodeURIComponent(uuid)}/audit-log`);
-  }
-
-  /** Pre-register a device in factory and return its Claim Code (Factory/PlatformAdmin) */
-  registerDevice(req: { device_uuid: string; device_type: string; tenant_id: string; device_name?: string }): Promise<RegisterDeviceResponse> {
-    return this.request('/factory/register-device', {
-      method: 'POST',
-      body: JSON.stringify(req),
-    });
-  }
-}
-
-export interface RegisterDeviceResponse {
-  claim_code: string;
-  device_uuid: string;
-  device_type: string;
-}
-
-export interface AuditLogEntry {
-  action: string;
-  actor_sub: string;
-  ip_address: string | null;
-  created_at: string;
-}
-
-export const vpnApi = new VpnApiClient();
