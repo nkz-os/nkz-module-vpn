@@ -25,10 +25,10 @@ it as a route dependency, it is not a blanket path-prefix exemption.
 from __future__ import annotations
 
 import hmac
-from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, status
-from nkz_platform_sdk.auth import AuthContext, require_auth as _sdk_require_auth
+from nkz_platform_sdk.auth import AuthContext
+from nkz_platform_sdk.auth import require_auth as _sdk_require_auth
 
 from app.config import Settings, get_settings
 
@@ -46,7 +46,7 @@ __all__ = [
 TokenPayload = AuthContext
 
 
-def require_auth(roles: Optional[list[str]] = None):
+def require_auth(roles: list[str] | None = None):
     """FastAPI dependency for user-facing endpoints.
 
     Reads X-Tenant-ID / X-User-ID / X-User-Roles injected by api-gateway.
@@ -105,7 +105,7 @@ def require_roles(*required_roles: str):
 
 
 async def verify_internal_secret(
-    x_internal_service_secret: Optional[str] = Header(None, alias="X-Internal-Service-Secret"),
+    x_internal_service_secret: str | None = Header(None, alias="X-Internal-Service-Secret"),
     settings: Settings = Depends(get_settings),
 ) -> None:
     """Authenticate /internal/* routes via the shared K8s secret.

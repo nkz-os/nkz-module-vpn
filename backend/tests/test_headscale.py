@@ -1,7 +1,7 @@
 """Headscale 0.23 REST client (grpc-gateway JSON: lowerCamelCase, uint64 ids as strings)."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -28,8 +28,10 @@ def test_headscale_user_for_tenant():
 
 @respx.mock
 async def test_ensure_user_creates_when_absent(client):
-    respx.get(f"{BASE}/api/v1/user").mock(return_value=httpx.Response(200, json={"users": [{"id": "1", "name": "other"}]}))
-    create = respx.post(f"{BASE}/api/v1/user").mock(return_value=httpx.Response(200, json={"user": {"id": "2", "name": "acme"}}))
+    users = {"users": [{"id": "1", "name": "other"}]}
+    respx.get(f"{BASE}/api/v1/user").mock(return_value=httpx.Response(200, json=users))
+    created = {"user": {"id": "2", "name": "acme"}}
+    create = respx.post(f"{BASE}/api/v1/user").mock(return_value=httpx.Response(200, json=created))
     await client.ensure_user("acme")
     assert create.called
     assert json.loads(create.calls.last.request.content) == {"name": "acme"}
@@ -38,7 +40,8 @@ async def test_ensure_user_creates_when_absent(client):
 
 @respx.mock
 async def test_ensure_user_noop_when_present(client):
-    respx.get(f"{BASE}/api/v1/user").mock(return_value=httpx.Response(200, json={"users": [{"id": "2", "name": "acme"}]}))
+    users = {"users": [{"id": "2", "name": "acme"}]}
+    respx.get(f"{BASE}/api/v1/user").mock(return_value=httpx.Response(200, json=users))
     create = respx.post(f"{BASE}/api/v1/user")
     await client.ensure_user("acme")
     assert not create.called
@@ -46,7 +49,7 @@ async def test_ensure_user_noop_when_present(client):
 
 @respx.mock
 async def test_create_preauth_key_sends_acl_tags_and_expiration(client):
-    expiry = (datetime.now(timezone.utc) + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    expiry = (datetime.now(UTC) + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
     route = respx.post(f"{BASE}/api/v1/preauthkey").mock(return_value=httpx.Response(200, json={
         "preAuthKey": {"user": "acme", "id": "13", "key": "secret-key", "reusable": False, "ephemeral": False,
                        "used": False, "expiration": expiry, "aclTags": ["tag:field-device"]}}))
@@ -55,8 +58,8 @@ async def test_create_preauth_key_sends_acl_tags_and_expiration(client):
     assert body["user"] == "acme"
     assert body["aclTags"] == ["tag:field-device"]
     assert body["reusable"] is False and body["ephemeral"] is False
-    requested = datetime.strptime(body["expiration"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    assert abs((requested - datetime.now(timezone.utc)) - timedelta(minutes=30)) < timedelta(seconds=60)
+    requested = datetime.strptime(body["expiration"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    assert abs((requested - datetime.now(UTC)) - timedelta(minutes=30)) < timedelta(seconds=60)
     assert (key.id, key.key) == ("13", "secret-key")
     assert key.expires_at.tzinfo is not None
 
@@ -85,7 +88,7 @@ async def test_find_node_by_preauth_id_then_hostname(client):
     assert (by_key.id, by_key.ip, by_key.online, by_key.forced_tags) == ("9", "192.0.2.9", True, ("tag:field-device",))
     by_name = await client.find_node("acme", preauth_key_id="999", hostname="3f1c2a9e-7b4d-4c1e-9a2b-1d2e3f4a5b6c")
     assert by_name.id == "9"
-    assert by_name.last_seen == datetime(2026, 10, 25, tzinfo=timezone.utc)
+    assert by_name.last_seen == datetime(2026, 10, 25, tzinfo=UTC)
 
 
 @respx.mock

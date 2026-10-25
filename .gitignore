@@ -38,3 +38,7 @@ yarn-error.log*
 apikey_*.txt
 *.apikey
 *-secret*
+
+# Python
+__pycache__/
+*.pyc

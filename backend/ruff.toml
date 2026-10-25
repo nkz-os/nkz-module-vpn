@@ -1,0 +1,7 @@
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+# FastAPI declares dependencies as Depends(...) defaults by design.
+ignore = ["B008"]

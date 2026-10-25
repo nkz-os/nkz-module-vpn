@@ -7,8 +7,8 @@ skips this sees no rows at all.
 """
 
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 import asyncpg
 
@@ -33,10 +33,9 @@ class Database:
 
     @asynccontextmanager
     async def _scoped_tx(self, scope: str) -> AsyncIterator[asyncpg.Connection]:
-        async with self._pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute("SELECT set_config('app.current_tenant_id', $1, true)", scope)
-                yield conn
+        async with self._pool.acquire() as conn, conn.transaction():
+            await conn.execute("SELECT set_config('app.current_tenant_id', $1, true)", scope)
+            yield conn
 
     def tenant_tx(self, tenant_id: str):
         if not tenant_id or tenant_id == PLATFORM_SCOPE:

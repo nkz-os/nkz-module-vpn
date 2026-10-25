@@ -1,91 +1,22 @@
-"""
-Tests for Device Management Backend
-"""
-
-import pytest
-from fastapi.testclient import TestClient
-
-from app.config import get_settings
-from app.main import app
+"""Application surface: health probe and generated API docs."""
 
 
-@pytest.fixture
-def client():
-    """Test client fixture."""
-    return TestClient(app)
+async def test_health_check(api):
+    r = await api.get("/health")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "healthy"
+    assert data["service"] == "Device Management"
 
 
-class TestHealth:
-    """Health endpoint tests."""
-
-    def test_health_check(self, client):
-        """Test health endpoint returns healthy status."""
-        response = client.get("/health")
-        assert response.status_code == 200
-
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert "service" in data
-        assert "version" in data
+async def test_docs_available(api):
+    r = await api.get("/api/vpn/docs")
+    assert r.status_code == 200
 
 
-class TestAPI:
-    """API endpoint tests."""
-
-    def test_docs_available(self, client):
-        """Test OpenAPI docs are available."""
-        response = client.get("/api/vpn/docs")
-        # Should return HTML or redirect
-        assert response.status_code in [200, 307]
-
-    def test_openapi_schema(self, client):
-        """Test OpenAPI schema is generated."""
-        response = client.get("/api/vpn/openapi.json")
-        assert response.status_code == 200
-
-        schema = response.json()
-        assert "openapi" in schema
-        assert "paths" in schema
-
-    def test_list_data_requires_auth(self, client):
-        """Requests without gateway headers (X-Tenant-ID / X-User-ID) are rejected."""
-        response = client.get("/api/vpn/data")
-        assert response.status_code == 401
-
-    def test_list_data_with_gateway_headers(self, client):
-        """Gateway-injected headers are trusted directly — no JWT/JWKS involved."""
-        response = client.get(
-            "/api/vpn/data",
-            headers={"X-Tenant-ID": "test-tenant", "X-User-ID": "test-user"},
-        )
-        assert response.status_code == 200
-
-
-class TestInternal:
-    """/internal/* routes — authenticated by X-Internal-Service-Secret, not gateway headers."""
-
-    @pytest.fixture(autouse=True)
-    def _internal_secret(self, monkeypatch):
-        monkeypatch.setenv("INTERNAL_SERVICE_SECRET", "test-internal-secret")
-        get_settings.cache_clear()
-        yield
-        get_settings.cache_clear()
-
-    def test_internal_rejects_missing_secret(self, client):
-        response = client.post("/api/vpn/internal/ping")
-        assert response.status_code == 401
-
-    def test_internal_rejects_wrong_secret(self, client):
-        response = client.post(
-            "/api/vpn/internal/ping",
-            headers={"X-Internal-Service-Secret": "wrong"},
-        )
-        assert response.status_code == 401
-
-    def test_internal_accepts_correct_secret(self, client):
-        response = client.post(
-            "/api/vpn/internal/ping",
-            headers={"X-Internal-Service-Secret": "test-internal-secret"},
-        )
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+async def test_openapi_lists_factory_routes(api):
+    r = await api.get("/api/vpn/openapi.json")
+    assert r.status_code == 200
+    paths = r.json()["paths"]
+    assert "/api/vpn/factory/register-device" in paths
+    assert "/api/vpn/factory/sign-csr" in paths

@@ -10,7 +10,7 @@ Errors never include request bodies: a pre-auth key must not reach a log line.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -98,7 +98,7 @@ class HeadscaleClient:
     async def create_preauth_key(
         self, user: str, ttl_minutes: int, tags: tuple[str, ...] = (FIELD_DEVICE_TAG,)
     ) -> PreAuthKey:
-        expiration = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
+        expiration = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
         data = await self._request("POST", "/api/v1/preauthkey", json={
             "user": user,
             "reusable": False,
@@ -109,7 +109,8 @@ class HeadscaleClient:
         raw = data.get("preAuthKey") or {}
         if not raw.get("key") or not raw.get("id"):
             raise HeadscaleError("headscale returned no pre-auth key")
-        return PreAuthKey(id=str(raw["id"]), key=raw["key"], expires_at=_parse_time(raw.get("expiration")) or expiration)
+        expires_at = _parse_time(raw.get("expiration")) or expiration
+        return PreAuthKey(id=str(raw["id"]), key=raw["key"], expires_at=expires_at)
 
     async def expire_preauth_key(self, user: str, key: str) -> None:
         await self._request("POST", "/api/v1/preauthkey/expire", json={"user": user, "key": key})

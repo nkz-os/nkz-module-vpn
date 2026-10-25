@@ -108,7 +108,9 @@ class DeviceRepo:
             raise InvalidTransition(f"{device_uuid}: already revoked or missing")
         return _device(row)
 
-    async def set_node(self, device_uuid: str, *, node_id: str, node_hostname: str | None, node_ip: str | None) -> Device:
+    async def set_node(
+        self, device_uuid: str, *, node_id: str, node_hostname: str | None, node_ip: str | None
+    ) -> Device:
         row = await self._conn.fetchrow(
             f"UPDATE devices SET node_id = $2, node_hostname = $3, node_ip = $4::inet, updated_at = now() "
             f"WHERE device_uuid = $1 RETURNING {_DEVICE_COLUMNS}",
