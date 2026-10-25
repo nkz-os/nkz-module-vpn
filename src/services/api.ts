@@ -1,48 +1,67 @@
 /**
- * API Client for Device Management
+ * Device Management API client.
  *
- * This is a template for creating an API client that uses the Nekazari SDK.
- * Replace with your actual API endpoints and methods.
+ * The API origin is a runtime value injected by the host page
+ * (window.__ENV__.VITE_API_URL). Calls carry the session cookie, which is
+ * host-only on the API host — a relative /api call from the frontend host
+ * would go out without credentials. The api-gateway adds the tenant and
+ * signature headers; the client never sends them.
  */
+import type {
+  ClaimOut,
+  DeviceEventOut,
+  DeviceListOut,
+  DeviceOut,
+  DeviceType,
+  RegisterDeviceOut,
+  ValidateOut,
+} from '../types/vpn';
 
-import { NKZClient, useAuth } from '@nekazari/sdk';
+declare global {
+  interface Window {
+    __ENV__?: { VITE_API_URL?: string };
+  }
+}
 
-// The frontend host and the API can live on different domains (MF2 modules
-// run inside the host's origin while the API is served from a separate
-// host) — a relative baseUrl silently breaks cross-origin. There is NO useConfig() hook in
-// @nekazari/sdk; read the API base at build time via VITE_API_URL, with a
-// placeholder fallback so this never silently points at a real domain.
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://your-api-domain';
+function apiBase(): string {
+  const runtime = typeof window !== 'undefined' ? window.__ENV__?.VITE_API_URL : undefined;
+  const buildTime = (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_API_URL;
+  return `${(runtime ?? buildTime ?? '').replace(/\/$/, '')}/api/vpn`;
+}
 
-/**
- * Hook to get API client instance
- * Automatically handles authentication and tenant context
- */
-export function useModuleApi() {
-  const { getToken, getTenantId } = useAuth();
+export class ApiError extends Error {
+  constructor(public readonly status: number, public readonly detail: string) {
+    super(detail || `HTTP ${status}`);
+    this.name = 'ApiError';
+  }
+}
 
-  const client = new NKZClient({
-    baseUrl: `${API_BASE}/api/vpn`,
-    getToken,
-    getTenantId,
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${apiBase()}${path}`, {
+    ...init,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(init.headers as Record<string, string> | undefined) },
   });
-
-  return {
-    // Example API methods - replace with your actual endpoints
-    getData: () => client.get('/data'),
-    getDataById: (id: string) => client.get(`/data/${id}`),
-    createData: (data: any) => client.post('/data', data),
-    updateData: (id: string, data: any) => client.put(`/data/${id}`, data),
-    deleteData: (id: string) => client.delete(`/data/${id}`),
-  };
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { detail?: unknown };
+    throw new ApiError(res.status, typeof body.detail === 'string' ? body.detail : '');
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
 }
 
-/**
- * Standalone API client (for use outside React components)
- */
-export function createModuleApiClient() {
-  // This would need token and tenantId passed in
-  // For React components, use useModuleApi() instead
-  throw new Error('Use useModuleApi() hook in React components');
-}
+const post = <T>(path: string, body: unknown) => request<T>(path, { method: 'POST', body: JSON.stringify(body) });
+const id = (uuid: string) => encodeURIComponent(uuid);
 
+export const vpnApi = {
+  listDevices: (allTenants = false) =>
+    request<DeviceListOut>(`/devices${allTenants ? '?all_tenants=true' : ''}`),
+  getDevice: (uuid: string) => request<DeviceOut>(`/devices/${id(uuid)}`),
+  listEvents: (uuid: string) => request<{ events: DeviceEventOut[] }>(`/devices/${id(uuid)}/events`),
+  validateDevice: (body: { device_uuid: string; claim_code: string }) => post<ValidateOut>('/devices/validate', body),
+  claimDevice: (body: { device_uuid: string; claim_code: string; display_name?: string }) =>
+    post<ClaimOut>('/devices/claim', body),
+  revokeDevice: (uuid: string) => request<void>(`/devices/${id(uuid)}`, { method: 'DELETE' }),
+  registerDevice: (body: { device_uuid: string; device_type: DeviceType; tenant_id: string; display_name?: string }) =>
+    post<RegisterDeviceOut>('/factory/register-device', body),
+};

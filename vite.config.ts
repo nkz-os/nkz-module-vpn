@@ -12,7 +12,7 @@ export default defineConfig(nkzModulePreset({
       alias: { '@': path.resolve(__dirname, './src') },
     },
     server: {
-      port: 5003,
+      port: 5004,
       proxy: {
         // Set VITE_PROXY_TARGET to your API domain for local dev.
         // No default to avoid hardcoded URLs.

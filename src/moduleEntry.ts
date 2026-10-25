@@ -1,15 +1,11 @@
 /**
  * Module entry point — canonical `defineModule()` pattern (Module Federation 2.0).
  *
- * @nekazari/module-builder's `nkzModulePreset()` exposes this file as `./Module`
- * and builds it into `dist/remoteEntry.js`. The host loads it at runtime via
- * `registerRemotes` + `loadRemote('vpn/Module')`.
+ * defineModule() is the runtime source of truth: every publish overwrites the
+ * marketplace row with the manifest emitted from it (roles, route, version).
+ * The root manifest.json and k8s/registration.sql are seeds and must agree.
  *
- * Do NOT call `window.__NKZ__.register()` here — that IIFE pattern no longer
- * works under Module Federation 2.0. Export the `defineModule()` result instead;
- * the builder + host runtime derive registration, slots and manifest from it.
- *
- * vpn must match the `id` column in marketplace_modules exactly.
+ * `vpn` must match the `id` column in marketplace_modules exactly.
  */
 import { defineModule } from '@nekazari/module-kit';
 import { lazy } from 'react';
@@ -24,9 +20,13 @@ export default defineModule({
   displayName: 'Device Management',
   version: pkg.version,
   hostApiVersion: '^2.0.0',
-  description: 'Device Management — Nekazari Platform Module',
-  accent: { base: '#3B82F6', soft: '#DBEAFE', strong: '#1D4ED8' },
-  icon: 'puzzle',
+  description: 'Zero-touch provisioning of field devices over the platform VPN',
+  accent: { base: '#3B82F6', soft: '#93C5FD', strong: '#1D4ED8' },
+  icon: 'network',
   main: MainPage,
+  route: '/devices',
+  requiredRoles: ['TenantAdmin', 'PlatformAdmin'],
+  api: { basePath: '/api/vpn' },
+  data: { entities: ['ManufacturingMachine', 'Device'], timeseries: [] },
   slots: moduleSlots as never,
 });
