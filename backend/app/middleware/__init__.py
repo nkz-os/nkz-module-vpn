@@ -30,7 +30,7 @@ from fastapi import Depends, Header, HTTPException, status
 from nkz_platform_sdk.auth import AuthContext
 from nkz_platform_sdk.auth import require_auth as _sdk_require_auth
 
-from app.config import Settings, get_settings
+from app.deps import Services, get_services
 
 __all__ = [
     "AuthContext",
@@ -106,7 +106,7 @@ def require_roles(*required_roles: str):
 
 async def verify_internal_secret(
     x_internal_service_secret: str | None = Header(None, alias="X-Internal-Service-Secret"),
-    settings: Settings = Depends(get_settings),
+    svc: Services = Depends(get_services),
 ) -> None:
     """Authenticate /internal/* routes via the shared K8s secret.
 
@@ -120,7 +120,7 @@ async def verify_internal_secret(
         @router.post("/internal/setup-parcel", dependencies=[Depends(verify_internal_secret)])
         async def setup_parcel(...): ...
     """
-    expected = settings.internal_service_secret
+    expected = svc.settings.internal_service_secret
     provided = x_internal_service_secret or ""
     if not expected or not hmac.compare_digest(provided, expected):
         raise HTTPException(
