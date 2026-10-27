@@ -40,7 +40,8 @@ async def get_device(device_uuid: UUID, svc: Services = Depends(get_services)):
         device = await DeviceRepo(conn).get(str(device_uuid))
     if device is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Device not found")
-    device, node = await claim_flow.reconcile_node(svc, device)
+    view = await claim_flow.reconcile_node(svc, device)
+    device, node = view.device, view.node
     return InternalDeviceOut(
         device_uuid=device.device_uuid, tenant_id=device.tenant_id, device_type=device.device_type,
         state=device.state, ngsi_entity_id=device.ngsi_entity_id, ngsi_entity_type=device.ngsi_entity_type,

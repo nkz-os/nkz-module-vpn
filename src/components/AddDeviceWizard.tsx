@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Button, Card, Input, Stack, Inline } from '@nekazari/ui-kit';
 import { ApiError, vpnApi } from '../services/api';
 import type { ClaimOut } from '../types/vpn';
-import { claimErrorKey, joinCommand } from '../lib/format';
-import { CopyButton } from './CopyButton';
+import { claimErrorKey } from '../lib/format';
+import { JoinInstructions } from './JoinInstructions';
 
 type Step = 'form' | 'success' | 'error';
 
@@ -43,24 +43,11 @@ export const AddDeviceWizard: React.FC<Props> = ({ onClose, onActivated }) => {
 
   if (step === 'success' && result) {
     const network = result.network;
-    const command = network ? joinCommand(network) : '';
     return (
       <Card padding="lg">
         <Stack gap="stack">
           <span className="text-nkz-lg font-semibold text-nkz-text-primary">{t('wizard.successTitle')}</span>
-          {network && (
-            <Stack gap="inline">
-              <span className="text-nkz-sm font-semibold text-nkz-text-primary">{t('wizard.keyTitle')}</span>
-              <span className="text-nkz-xs text-nkz-text-secondary">
-                {t('wizard.expires', { when: new Date(network.expires_at).toLocaleString() })}
-              </span>
-              <span className="text-nkz-sm text-nkz-text-secondary">{t('wizard.command')}</span>
-              <Inline gap="inline" align="center" wrap>
-                <code className="text-nkz-xs font-mono break-all">{command}</code>
-                <CopyButton value={command} />
-              </Inline>
-            </Stack>
-          )}
+          {network && <JoinInstructions network={network} />}
           <span className="text-nkz-xs text-nkz-text-secondary break-all">
             {t('wizard.entityId')}: <span className="font-mono">{result.ngsi_entity_id}</span>
           </span>

@@ -48,6 +48,7 @@ class Settings(BaseSettings):
 
     # Claim codes: one secret per version, V1 first.
     factory_secret_v1: str = ""
+    factory_secret_v2: str = ""  # rotation; see app/services/claim_code.py
     factory_secret_current_version: int = 1
 
     # Pre-auth keys handed out at claim time.

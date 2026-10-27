@@ -8,6 +8,7 @@ import type { DeviceOut } from '../types/vpn';
 import { AddDeviceWizard } from '../components/AddDeviceWizard';
 import { DeviceList } from '../components/DeviceList';
 import { FactoryPanel } from '../components/FactoryPanel';
+import { ReissueKey } from '../components/ReissueKey';
 import { RevokeConfirm } from '../components/RevokeConfirm';
 
 const STEPS = ['step1', 'step2', 'step3', 'step4', 'step5'] as const;
@@ -20,6 +21,7 @@ export const DevicesPage: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [showFactory, setShowFactory] = useState(false);
   const [revoking, setRevoking] = useState<DeviceOut | null>(null);
+  const [reissuing, setReissuing] = useState<DeviceOut | null>(null);
   const { devices, loading, error, refresh } = useDevices(isPlatformAdmin && allTenants);
 
   return (
@@ -52,6 +54,15 @@ export const DevicesPage: React.FC = () => {
 
       {showWizard && <AddDeviceWizard onClose={() => setShowWizard(false)} onActivated={refresh} />}
       {showFactory && isPlatformAdmin && <FactoryPanel onRegistered={refresh} />}
+      {reissuing && (
+        <ReissueKey
+          device={reissuing}
+          onClose={() => {
+            setReissuing(null);
+            refresh();
+          }}
+        />
+      )}
       {revoking && (
         <RevokeConfirm
           device={revoking}
@@ -83,8 +94,10 @@ export const DevicesPage: React.FC = () => {
           loading={loading}
           error={error}
           showTenant={isPlatformAdmin && allTenants}
+          currentTenant={auth.getTenantId()}
           onRetry={refresh}
           onRevoke={setRevoking}
+          onReissue={setReissuing}
         />
       </Stack>
     </Stack>

@@ -37,10 +37,10 @@ curl -fsSL https://tailscale.com/install.sh | sh
 A platform operator (PlatformAdmin) provisions each unit with `factory-tool/flash_tool.py`:
 
 ```bash
+export NKZ_FACTORY_TOKEN=<PLATFORM_ADMIN_ACCESS_TOKEN>   # not on the command line
 python factory-tool/flash_tool.py provision \
   --uuid <DEVICE_UUID> --type rover|gateway|sensor --tenant <ORGANISATION_ID> \
-  --api-url https://<platform-api> --token <PLATFORM_ADMIN_ACCESS_TOKEN> \
-  --out-dir ./output/<DEVICE_UUID>/
+  --api-url https://<platform-api> --out-dir ./output/<DEVICE_UUID>/
 ```
 
 It registers the device for the organisation it is built for, generates the key pair and CSR
@@ -68,6 +68,10 @@ a later step fails, running it again for the same device returns the same code.
    announced by the subnet router. `--hostname` must be the device UUID — the platform uses it
    to recognise the node.
 3. The device appears **online** in the Devices page with its tailnet address.
+
+If the key expired before the device joined (or was not copied), use **New key** on the
+device in the Devices page: it expires the old key and shows a new command. It is only
+offered while the device has not joined.
 
 Verify on the device:
 

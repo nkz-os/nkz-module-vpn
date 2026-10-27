@@ -40,7 +40,9 @@
     "loadError": "No se pudieron cargar los dispositivos",
     "retry": "Reintentar",
     "empty": "Aún no hay dispositivos",
-    "emptyHint": "Usa «Añadir dispositivo» para activar el primero."
+    "emptyHint": "Usa «Añadir dispositivo» para activar el primero.",
+    "networkUnknown": "Estado VPN no disponible",
+    "reissue": "Nueva clave"
   },
   "wizard": {
     "title": "Activar un dispositivo",
@@ -101,12 +103,18 @@
     "confirm": "Revocar",
     "confirming": "Revocando…",
     "cancel": "Cancelar",
-    "failed": "No se pudo revocar: {{message}}"
+    "error": {
+      "404": "No se encontró el dispositivo en tu organización.",
+      "409": "El dispositivo ya está revocado.",
+      "502": "El servicio VPN no respondió. No se ha cambiado nada; vuelve a intentarlo en un momento.",
+      "generic": "No se pudo revocar."
+    }
   },
   "context": {
     "title": "Dispositivo VPN",
     "notManaged": "Esta entidad no es un dispositivo aprovisionado.",
-    "ip": "Dirección VPN: {{ip}}"
+    "ip": "Dirección VPN: {{ip}}",
+    "loadError": "No se pudo cargar el estado del dispositivo."
   },
   "widget": {
     "title": "Dispositivos de campo",
@@ -115,5 +123,15 @@
     "online": "{{n}} en línea",
     "loadError": "No se pudo cargar el estado de los dispositivos",
     "empty": "Aún no hay dispositivos aprovisionados."
+  },
+  "reissue": {
+    "title": "Nueva clave VPN",
+    "explain": "Úsalo si el dispositivo nunca llegó a conectarse: la clave anterior caducó o no se copió. La clave anterior deja de valer.",
+    "confirm": "Emitir nueva clave",
+    "error": {
+      "409": "Este dispositivo ya está en la VPN, o no es un robot o gateway activo.",
+      "502": "El servicio VPN no respondió. No se ha cambiado nada; vuelve a intentarlo en un momento.",
+      "generic": "No se pudo emitir una nueva clave."
+    }
   }
 }

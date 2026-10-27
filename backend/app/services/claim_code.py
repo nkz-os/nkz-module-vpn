@@ -9,9 +9,9 @@ function of the device UUID and the versioned factory secret, so nothing is
 stored: validation recomputes it and compares in constant time. A device
 re-registered with the same UUID and version therefore keeps its printed code.
 
-Rotation: if K_v1 leaks, add FACTORY_SECRET_V2 and bump
-FACTORY_SECRET_CURRENT_VERSION; devices keep the version they were registered
-with (devices.claim_version).
+Rotation: if K_v1 leaks, set FACTORY_SECRET_V2 and FACTORY_SECRET_CURRENT_VERSION=2;
+devices keep the version they were registered with (devices.claim_version). A
+further version needs its own field in app.config.Settings.
 """
 
 import base64
@@ -27,8 +27,14 @@ def generate_claim_code(device_uuid: str, secret: str, version: int) -> str:
     return f"V{version}-{body}"
 
 
+_LOOKALIKES = str.maketrans({"0": "O", "1": "I", "8": "B"})  # Base32 bodies never contain 0, 1, 8 or 9
+
+
 def normalize_claim_code(code: str) -> str:
-    return code.strip().upper()
+    """Upper-case, drop all whitespace, and read 0/1/8 in the body as O/I/B (as typed from a label)."""
+    compact = "".join(code.split()).upper()
+    prefix, sep, body = compact.partition("-")
+    return f"{prefix}{sep}{body.translate(_LOOKALIKES)}" if sep else compact
 
 
 def validate_claim_code(device_uuid: str, submitted: str, secret: str, version: int) -> bool:

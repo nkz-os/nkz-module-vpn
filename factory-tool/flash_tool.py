@@ -8,7 +8,6 @@ Usage:
         --type rover|gateway|sensor \
         --tenant <TENANT_ID> \
         --api-url https://<api-host> \
-        --token <PLATFORM_ADMIN_ACCESS_TOKEN> \
         --out-dir ./output/<uuid>/
 
 What it does:
@@ -26,7 +25,9 @@ What it does:
        and for sensors a C header (nkz_credentials.h) with the PEMs.
 
 Both calls go through the platform API gateway with a PlatformAdmin access
-token; the claim code is the only activation mechanism for the tenant.
+token, read from the NKZ_FACTORY_TOKEN environment variable (never from the
+command line, which ends up in shell history and process listings). The claim
+code is the only activation mechanism for the tenant.
 """
 
 import argparse
@@ -150,10 +151,13 @@ def main() -> None:
     p.add_argument("--type", required=True, choices=DEVICE_TYPES)
     p.add_argument("--tenant", required=True, help="Tenant ID the device is built for")
     p.add_argument("--api-url", required=True, help="Platform API origin")
-    p.add_argument("--token", required=True, help="PlatformAdmin access token")
     p.add_argument("--out-dir", required=True, help="Output directory")
     p.add_argument("--name", help="Display name")
     args = parser.parse_args()
+    args.token = os.environ.get("NKZ_FACTORY_TOKEN", "")
+    if args.command == "provision" and not args.token:
+        print("ERROR: set NKZ_FACTORY_TOKEN to a PlatformAdmin access token", file=sys.stderr)
+        sys.exit(2)
     if args.command == "provision":
         provision(args)
     else:

@@ -154,3 +154,11 @@ async def test_expire_unused_key_skips_used_or_missing(client):
     assert await client.expire_unused_key("acme", "13") is False
     assert await client.expire_unused_key("acme", "99") is False
     assert not expire.called
+
+
+@respx.mock
+async def test_ensure_user_tolerates_concurrent_creation(client):
+    lists = iter([{"users": []}, {"users": [{"id": "2", "name": "acme"}]}])
+    respx.get(f"{BASE}/api/v1/user").mock(side_effect=lambda req: httpx.Response(200, json=next(lists)))
+    respx.post(f"{BASE}/api/v1/user").mock(return_value=httpx.Response(500, text="already exists"))
+    await client.ensure_user("acme")  # another claim created it in between: fine

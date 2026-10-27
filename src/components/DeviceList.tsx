@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, EmptyState, Inline, Spinner, Stack } from '@nekazari/ui-kit';
-import { Cpu, Radio, Router, Trash2 } from 'lucide-react';
+import { Cpu, KeyRound, Radio, Router, Trash2 } from 'lucide-react';
 import type { DeviceOut } from '../types/vpn';
 import { NodeStatus, StateBadge } from './StateBadge';
 
@@ -12,11 +12,15 @@ interface Props {
   loading: boolean;
   error: number | null;
   showTenant: boolean;
+  currentTenant: string | undefined;
   onRetry: () => void;
   onRevoke: (device: DeviceOut) => void;
+  onReissue: (device: DeviceOut) => void;
 }
 
-export const DeviceList: React.FC<Props> = ({ devices, loading, error, showTenant, onRetry, onRevoke }) => {
+export const DeviceList: React.FC<Props> = ({
+  devices, loading, error, showTenant, currentTenant, onRetry, onRevoke, onReissue,
+}) => {
   const { t } = useTranslation('vpn');
 
   if (loading && devices.length === 0) {
@@ -59,7 +63,13 @@ export const DeviceList: React.FC<Props> = ({ devices, loading, error, showTenan
                 {showTenant && <Badge intent="info">{device.tenant_id}</Badge>}
                 <StateBadge state={device.state} />
                 <NodeStatus device={device} />
-                {device.state !== 'REVOKED' && (
+                {device.state === 'CLAIMED' && device.device_type !== 'sensor' && !device.node &&
+                  !device.network_unknown && device.tenant_id === currentTenant && (
+                  <Button variant="ghost" size="sm" onClick={() => onReissue(device)} leadingIcon={<KeyRound size={14} />}>
+                    {t('list.reissue')}
+                  </Button>
+                )}
+                {device.state !== 'REVOKED' && device.tenant_id === currentTenant && (
                   <Button variant="ghost" size="sm" onClick={() => onRevoke(device)}
                     leadingIcon={<Trash2 size={14} />} aria-label={t('list.revoke')}>
                     {t('list.revoke')}

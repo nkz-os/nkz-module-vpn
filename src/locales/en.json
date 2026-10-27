@@ -40,7 +40,9 @@
     "loadError": "Could not load devices",
     "retry": "Retry",
     "empty": "No devices yet",
-    "emptyHint": "Use “Add device” to activate the first one."
+    "emptyHint": "Use “Add device” to activate the first one.",
+    "networkUnknown": "VPN state unavailable",
+    "reissue": "New key"
   },
   "wizard": {
     "title": "Activate a device",
@@ -101,12 +103,18 @@
     "confirm": "Revoke",
     "confirming": "Revoking…",
     "cancel": "Cancel",
-    "failed": "Revocation failed: {{message}}"
+    "error": {
+      "404": "The device was not found in your organisation.",
+      "409": "The device is already revoked.",
+      "502": "The VPN service did not answer. Nothing was changed; try again in a moment.",
+      "generic": "Revocation failed."
+    }
   },
   "context": {
     "title": "VPN device",
     "notManaged": "This entity is not a provisioned device.",
-    "ip": "VPN address: {{ip}}"
+    "ip": "VPN address: {{ip}}",
+    "loadError": "Could not load the device state."
   },
   "widget": {
     "title": "Field devices",
@@ -115,5 +123,15 @@
     "online": "{{n}} online",
     "loadError": "Could not load device status",
     "empty": "No devices provisioned yet."
+  },
+  "reissue": {
+    "title": "New VPN key",
+    "explain": "Use this when the device never joined: the previous key expired or was not copied. The old key stops working.",
+    "confirm": "Issue new key",
+    "error": {
+      "409": "This device is already on the VPN, or is not an active robot or gateway.",
+      "502": "The VPN service did not answer. Nothing was changed; try again in a moment.",
+      "generic": "Could not issue a new key."
+    }
   }
 }

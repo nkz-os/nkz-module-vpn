@@ -374,3 +374,70 @@ async def test_revoke_expires_unused_key(api, db, mocks):
     assert r.status_code == 204
     assert json.loads(mocks["expire"].calls.last.request.content) == {"user": "acme", "key": "tskey-secret-value"}
     assert (await state_of(db)).state == "REVOKED"
+
+
+# --- reissue key -------------------------------------------------------------------
+
+async def test_reissue_key_for_device_that_never_joined(api, db, mocks):
+    await register(db)
+    await claim(api)
+    mocks["keys"].mock(return_value=httpx.Response(200, json={"preAuthKeys": [
+        {"id": "13", "key": "tskey-secret-value", "used": False, "expiration": "2030-01-01T00:00:00Z"}]}))
+    mocks["preauth"].mock(return_value=httpx.Response(200, json={"preAuthKey": {
+        "id": "14", "key": "tskey-new-value", "expiration": "2030-01-02T00:00:00Z", "aclTags": ["tag:field-device"]}}))
+    r = await api.post(f"/api/vpn/devices/{UUID}/reissue-key", headers=ACME)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["preauth_key"] == "tskey-new-value" and data["hostname"] == UUID
+    assert json.loads(mocks["expire"].calls.last.request.content) == {"user": "acme", "key": "tskey-secret-value"}
+    assert (await state_of(db)).preauth_key_id == "14"
+    assert (await actions_of(db))[-1] == "KEY_REISSUED"
+
+
+async def test_reissue_refused_when_node_joined(api, db, mocks):
+    await register(db)
+    await claim(api)
+    mocks["nodes"].mock(return_value=httpx.Response(200, json=node_list()))
+    r = await api.post(f"/api/vpn/devices/{UUID}/reissue-key", headers=ACME)
+    assert r.status_code == 409
+    assert mocks["preauth"].call_count == 1  # only the original claim
+
+
+async def test_reissue_refused_for_pending_and_sensor(api, db, mocks):
+    await register(db)
+    assert (await api.post(f"/api/vpn/devices/{UUID}/reissue-key", headers=ACME)).status_code == 409
+    await register(db, device_uuid=UUID_2, device_type="sensor")
+    await claim(api, device_uuid=UUID_2, code=generate_claim_code(UUID_2, FACTORY_SECRET, 1))
+    assert (await api.post(f"/api/vpn/devices/{UUID_2}/reissue-key", headers=ACME)).status_code == 409
+
+
+async def test_reissue_headscale_down_changes_nothing(api, db, mocks):
+    await register(db)
+    await claim(api)
+    mocks["nodes"].mock(return_value=httpx.Response(500))
+    r = await api.post(f"/api/vpn/devices/{UUID}/reissue-key", headers=ACME)
+    assert r.status_code == 502
+    assert (await state_of(db)).preauth_key_id == "13"
+
+
+async def test_reissue_other_tenant_404(api, db, mocks):
+    await register(db)
+    await claim(api)
+    assert (await api.post(f"/api/vpn/devices/{UUID}/reissue-key", headers=OTHER)).status_code == 404
+
+
+async def test_network_unknown_when_headscale_down(api, db, mocks):
+    await register(db)
+    await claim(api)
+    mocks["nodes"].mock(return_value=httpx.Response(500))
+    listed = (await api.get("/api/vpn/devices", headers=ACME)).json()["devices"][0]
+    single = (await api.get(f"/api/vpn/devices/{UUID}", headers=ACME)).json()
+    assert listed["node"] is None and listed["network_unknown"] is True
+    assert single["network_unknown"] is True
+
+
+async def test_network_known_when_not_joined(api, db, mocks):
+    await register(db)
+    await claim(api)
+    listed = (await api.get("/api/vpn/devices", headers=ACME)).json()["devices"][0]
+    assert listed["node"] is None and listed["network_unknown"] is False
